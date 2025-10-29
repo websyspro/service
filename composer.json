@@ -1,0 +1,23 @@
+{
+  "name": "websyspro/server",
+  "description": "Set of PHP features for use in Libraries",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "license": "MIT",
+  "type": "library",
+  "autoload": {
+    "psr-4": {
+      "Websyspro\\Server\\": "src/"
+    }   
+  },
+  "scripts": {
+    "upgit": "git add . && git commit -m \"Update components\" && git push origin HEAD"
+  },
+  "authors": [
+    {
+      "name": "websyspro",
+      "email": "websyspro.services@gmail.com"
+    }
+  ],
+  "require-dev": {}
+}
