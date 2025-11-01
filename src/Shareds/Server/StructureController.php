@@ -76,4 +76,10 @@ class StructureController
   ): void {
     unset($this->reflect);
   }
+
+  public function valid(
+    Request $request 
+  ): bool {
+    return $this->name === $request->controller;
+  }
 }

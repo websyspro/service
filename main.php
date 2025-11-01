@@ -1,14 +1,28 @@
 <?php
 
 use Websyspro\Core\Commons\Collection;
+use Websyspro\Core\Decorations\Server\AllowAnonymous;
 use Websyspro\Core\Decorations\Server\Get;
+use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
 use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
-use Websyspro\Core\Shareds\Server\StructureController;
+use Websyspro\Core\Shareds\Server\Request;
 
-#[Controller("account")]
-class Accounts {}
+#[Controller("accounts")]
+#[Authenticate()]
+class Accounts
+{
+  public function __construct(
+  ){}
+
+  #[Post(":test?/user/details")]
+  #[AllowAnonymous()]
+  public function all(    
+  ): array {
+    return [ "fafsdafsda" ];
+  }
+}
 
 #[Controller("perfils")]
 #[Authenticate()]
@@ -23,13 +37,19 @@ class Perfils
   ): array {
     return [];
   }
+
+  #[Post("list/products")]
+  public function products(    
+  ): array {
+    return [];
+  }  
 }
 
-$collection = new Collection([
-  Accounts::class,
-  Perfils::class
-]);
+$request = new Request(
+  new Collection([
+    Accounts::class,
+    Perfils::class
+  ]), "api/v1"
+);
 
-$collection = $collection->mapper(fn(string $class) => new StructureController($class));
-
-print_r($collection);
+print_r($request);

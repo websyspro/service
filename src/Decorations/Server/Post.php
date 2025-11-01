@@ -8,9 +8,9 @@ use Websyspro\Core\Enums\Server\ControllerType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 
 #[Attribute(Attribute::TARGET_METHOD)]
-class Get
+class Post
 {
-  public RequestMethod $requestMethod = RequestMethod::Get;
+  public RequestMethod $requestMethod = RequestMethod::Post;
   public ControllerType $controllerType = ControllerType::Endpoint;
 
   public function __construct(
@@ -27,9 +27,9 @@ class Get
       preg_split("#/#", $this->descriptor)
     );
   }
-
+  
   public function getRequestMethod(
   ): RequestMethod {
     return $this->requestMethod;
-  }  
+  } 
 }

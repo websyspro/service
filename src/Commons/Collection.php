@@ -5,7 +5,7 @@ namespace Websyspro\Core\Commons;
 class Collection
 {
   public function __construct(
-    private array $items = []
+    public array $items = []
   ){}
 
   public function add(
@@ -39,11 +39,11 @@ class Collection
       return new Collection();
     }
 
-    $this->items = Utils::mapper(
-      $this->items, $callableOrObject
+    return new Collection(
+      Utils::mapper(
+        $this->items, $callableOrObject
+      )
     );
-
-    return $this;
   }
 
   public function where(
@@ -115,6 +115,14 @@ class Collection
     callable $callable
   ): float {
     return array_sum(Utils::mapper( $this->items, $callable ));
+  }
+
+  public function eq(
+    int $eq
+  ): Collection {
+    return new Collection(
+      array_slice($this->items, $eq, 1)
+    );
   }
 
   public function first(    
