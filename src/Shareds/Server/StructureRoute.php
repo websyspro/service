@@ -1,13 +1,13 @@
 <?php
 
-namespace Websyspro\Server\Decorations\Server\Shareds;
+namespace Websyspro\Core\Shareds\Server;
 
 use ReflectionAttribute;
 use ReflectionMethod;
-use Websyspro\Server\commons\Collection;
-use Websyspro\Server\Decorations\Server\Get;
-use Websyspro\Server\Enums\Server\ControllerType;
-use Websyspro\Server\Enums\Server\MethodType;
+use Websyspro\Core\commons\Collection;
+use Websyspro\Core\Decorations\Server\Get;
+use Websyspro\Core\Enums\Server\ControllerType;
+use Websyspro\Core\Enums\Server\MethodType;
 
 class StructureRoute
 {

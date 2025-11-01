@@ -1,6 +1,6 @@
 <?php
 
-namespace Websyspro\Server\Enums\Server;
+namespace Websyspro\Core\Enums\Server;
 
 enum ControllerType {
   case Controller;

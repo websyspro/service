@@ -1,10 +1,10 @@
 <?php
 
-namespace Websyspro\Server\Decorations\Server;
+namespace Websyspro\Core\Decorations\Server;
 
 use Attribute;
-use Websyspro\Server\Enums\Server\ControllerType;
-use Websyspro\Server\Enums\Server\MethodType;
+use Websyspro\Core\Enums\Server\ControllerType;
+use Websyspro\Core\Enums\Server\MethodType;
 
 #[Attribute(Attribute::TARGET_METHOD)]
 class Get

@@ -1,8 +1,6 @@
 <?php
 
-namespace Websyspro\Server\commons;
-
-use Websyspro\Server\Commons\Utils;
+namespace Websyspro\Core\Commons;
 
 class Collection
 {

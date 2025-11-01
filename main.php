@@ -1,11 +1,11 @@
 <?php
 
-use Websyspro\Server\commons\Collection;
-use Websyspro\Server\Decorations\Server\Authenticate;
-use Websyspro\Server\Decorations\Server\Controller;
-use Websyspro\Server\Decorations\Server\FileValidade;
-use Websyspro\Server\Decorations\Server\Get;
-use Websyspro\Server\Decorations\Server\Shareds\StructureController;
+use Websyspro\Core\Commons\Collection;
+use Websyspro\Core\Decorations\Server\Get;
+use Websyspro\Core\Decorations\Server\Controller;
+use Websyspro\Core\Decorations\Server\FileValidade;
+use Websyspro\Core\Decorations\Server\Authenticate;
+use Websyspro\Core\Shareds\Server\StructureController;
 
 #[Controller("account")]
 class Accounts {}
@@ -33,4 +33,3 @@ $collection = new Collection([
 $collection = $collection->mapper(fn(string $class) => new StructureController($class));
 
 print_r($collection);
-

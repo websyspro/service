@@ -1,9 +1,9 @@
 <?php
 
-namespace Websyspro\Server\Decorations\Server;
+namespace Websyspro\Core\Decorations\Server;
 
 use Attribute;
-use Websyspro\Server\Enums\Server\ControllerType;
+use Websyspro\Core\Enums\Server\ControllerType;
 
 #[Attribute(Attribute::TARGET_CLASS)]
 class FileValidade
