@@ -6,4 +6,5 @@ enum ControllerType {
   case Controller;
   case Middleware;
   case Endpoint;
+  case Parameter;
 }

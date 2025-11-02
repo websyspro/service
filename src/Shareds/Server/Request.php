@@ -2,7 +2,13 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
+use ReflectionAttribute;
+use ReflectionClass;
+use ReflectionMethod;
 use Websyspro\Core\Commons\Collection;
+use Websyspro\Core\Commons\Reflect;
+use Websyspro\Core\Decorations\Server\AllowAnonymous;
+use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\RequestStatus;
@@ -90,14 +96,16 @@ class Request
   private function initialRequestControllers(
   ): void {
     $this->controllers = $this->controllers->mapper(
-      fn(string $controller) => new StructureController($controller)
+      fn(string $controller) => new StructureController(
+        new ReflectionClass($controller)
+      )
     );
   }
 
   private function initialRequestFindController(
   ): void {
     $this->structureController = $this->controllers->find(
-      fn(StructureController $structureController) => $structureController->valid($this)
+      fn(StructureController $structureController) => $structureController->isValid($this)
     );
 
     if($this->structureController === null){
@@ -122,9 +130,53 @@ class Request
   ): void {
     $this->requestData = new RequestData($this);
   }
+
+  private function getMiddlewares(
+  ): Collection {
+    return (
+      $this->structureController->getMiddlewares()
+        ->where(fn(object $middleware) => (
+          ($middleware instanceof Authenticate) ? (
+            $this->structureRoute->getMiddlewares()->where(
+              fn(object $middleware) => (
+                $middleware instanceof AllowAnonymous
+              )
+            )->exist() === false
+          ) : true
+        ))
+        ->merge($this->structureRoute->getMiddlewares())
+    );
+  }
+
+  private function getParameters(
+  ): Collection {
+    return $this->structureRoute->getParameters();
+  }
+
+  private function getInstance(
+  ): object {
+    $hasMethodConstruct = method_exists(
+      $this->structureRoute->reflect->class, "__construct"
+    );
+
+    if($hasMethodConstruct === true){
+      return InstanceDependences::gets($this->structureRoute->reflect->class);
+    } else return new $this->structureRoute->reflect->class;
+  }  
   
   public function getEndpointExecute(
   ): mixed {
+    $getMiddlewares = $this->getMiddlewares();
+    $getParameters = $this->getParameters();
+    $getInstance = $this->getInstance();
+
+    print_r($getParameters);
+
+    // print_r($getMiddlewares);
+    // print_r($getParameters);
+    // print_r($getInstance);
+
+
     return [];
   }
 

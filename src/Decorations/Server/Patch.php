@@ -7,8 +7,8 @@ use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\ControllerType;
 
 #[Attribute(Attribute::TARGET_METHOD)]
-class Get extends AbstractEndpoint
+class Patch extends AbstractEndpoint
 {
-  public RequestMethod $requestMethod = RequestMethod::Get;
+  public RequestMethod $requestMethod = RequestMethod::Patch;
   public ControllerType $controllerType = ControllerType::Endpoint;
 }

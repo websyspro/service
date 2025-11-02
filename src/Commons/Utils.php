@@ -2,7 +2,10 @@
 
 namespace Websyspro\Core\Commons;
 
+use ReflectionClass;
 use ReflectionFunction;
+use ReflectionNamedType;
+use stdClass;
 
 class Utils
 {
@@ -172,5 +175,47 @@ class Utils
       "int", "integer", "float", "double", 
       "string", "bool", "boolean", "array", "null"
     ], true);
+  }
+  
+  public static function hydrateObject( 
+    mixed $data,
+    string $className
+  ): object {
+    if(class_exists($className) === false){
+      return new stdClass();
+    }
+
+    $refClass = new ReflectionClass($className);
+    $instance = $refClass->newInstanceWithoutConstructor();
+
+    foreach($refClass->getProperties() as $prop){
+      $prop->setAccessible(true);
+
+      $type = $prop->getType();
+      if (!$type instanceof ReflectionNamedType) {
+        continue;
+      }
+
+      $typeName = $type->getName();
+      $propName = $prop->getName();
+
+      if(!array_key_exists($propName, $data)){
+        continue;
+      }
+
+      $value = $data[$propName];
+
+      if (Utils::isPrimitiveType($typeName)) {
+        settype($value, $typeName);
+        $prop->setValue($instance, $value);
+      } else if (class_exists($typeName) && is_array($value)) {
+        $nestedObj = Utils::hydrateObject($value, $typeName);
+        $prop->setValue($instance, $nestedObj);
+      } else {
+        $prop->setValue($instance, $value);
+      }
+    }
+
+    return $instance;
   }  
 }

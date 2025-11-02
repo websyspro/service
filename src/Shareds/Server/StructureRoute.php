@@ -2,38 +2,32 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
-use ReflectionMethod;
 use ReflectionAttribute;
 use Websyspro\Core\commons\Collection;
 use Websyspro\Core\Enums\Server\ControllerType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 
 class StructureRoute
+extends AbstractStructure
 {
   public Collection $endpoints;
   public Collection $middlewares;
   public RequestMethod $requestMethod;
 
-  public function __construct(
-    public ReflectionMethod $method
-  ){
-    $this->initialRoute();
+  public function start(
+  ): void {
+    $this->startEndpoint();
   }
 
-  private function initialRoute(
+  private function startEndpoint(
   ): void {
-    $collectionRoute = new Collection(
-      $this->method->getAttributes()
-    );
+    $methodAttributes = $this->attributes
+      ->where(fn(ReflectionAttribute $reflectionAttribute) => $this->isControllerType($reflectionAttribute, ControllerType::Endpoint))
+      ->mapper(fn(ReflectionAttribute $reflectionAttribute) => $this->createInstance($reflectionAttribute));
 
-    if($collectionRoute->exist()){
-      $collectionRoute = $collectionRoute->mapper(fn(ReflectionAttribute $reflectionAttribute) => $reflectionAttribute->newInstance());
-      $collectionRoute = $collectionRoute->where(fn(mixed $entpoint) => $entpoint->controllerType === ControllerType::Endpoint);
-      
-      if($collectionRoute->exist()){
-        $this->endpoints = $collectionRoute->first()->getEndpoints();
-        $this->requestMethod = $collectionRoute->first()->getRequestMethod();
-      }
+    if($methodAttributes->exist()){
+      $this->requestMethod = $methodAttributes->first()->getRequestMethod();
+      $this->endpoints = $methodAttributes->first()->getEndpoints();
     }
   }
 

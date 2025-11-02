@@ -4,6 +4,7 @@ namespace Websyspro\Core\Decorations\Server;
 
 use Attribute;
 use Websyspro\Core\Enums\Server\ControllerType;
+use Websyspro\Core\Shareds\Server\Request;
 
 #[Attribute(Attribute::TARGET_CLASS)]
 class Authenticate
@@ -12,4 +13,8 @@ class Authenticate
 
   public function __construct(
   ){}
+
+  public function execute(
+    Request $request
+  ): void {}  
 }

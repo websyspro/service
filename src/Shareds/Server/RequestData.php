@@ -58,9 +58,18 @@ class RequestData
           );
   
           if( $hasParams === true ){
+            $valueFromRequest = $this->request->endpoints
+              ->eq($i)->first();
+
+            if( (bool)preg_match( "#\?#", $path )){
+              if( empty($valueFromRequest) === true ){
+                $valueFromRequest = null;
+              } 
+            }
+
             $this->params[
               preg_replace("#(^\{)|(^:)|(\}$)|(\}\?$)|(\?$)#", "", $path)
-            ] = $this->request->endpoints->eq($i)->first();
+            ] = $valueFromRequest;
           }
         }
       );
