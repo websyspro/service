@@ -7,8 +7,11 @@ use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
 use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
+use Websyspro\Core\Decorations\Server\Module;
 use Websyspro\Core\Decorations\Server\Param;
+use Websyspro\Core\Shareds\Server\Application;
 use Websyspro\Core\Shareds\Server\Request;
+use Websyspro\Core\Shareds\Server\Response;
 
 #[Controller("accounts")]
 #[Authenticate()]
@@ -21,8 +24,8 @@ class Accounts
   #[AllowAnonymous()]
   public function all(  
     #[Param("test")] string $test
-  ): array {
-    return [ "fafsdafsda" ];
+  ): Response {
+    return Response::json("Test");
   }
 }
 
@@ -47,13 +50,25 @@ class Perfils
   }  
 }
 
-$request = new Request(
-  new Collection([
+#[Module(
+  controllers: [
     Accounts::class,
     Perfils::class
-  ]), "api/v1"
-);
+  ]
+)]
+class AccountModule {}
 
-print_r($request->getEndpointExecute());
+Application::module([
+  AccountModule::class
+]);
 
-//print_r($request);
+// $request = new Request(
+//   new Collection([
+//     Accounts::class,
+//     Perfils::class
+//   ]), "api/v1"
+// );
+
+// print_r($request);
+
+//print_r($request->getEndpointExecute());

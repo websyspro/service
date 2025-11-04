@@ -2,11 +2,8 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
-use ReflectionAttribute;
 use ReflectionClass;
-use ReflectionMethod;
 use Websyspro\Core\Commons\Collection;
-use Websyspro\Core\Commons\Reflect;
 use Websyspro\Core\Decorations\Server\AllowAnonymous;
 use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
@@ -16,6 +13,7 @@ use Websyspro\Core\Enums\Server\RequestStatus;
 class Request
 {
   public string $uri;
+  public string $module;
   public string $controller;
   public Collection $endpoints;
   public RequestData $requestData;
@@ -29,19 +27,19 @@ class Request
     public Collection $controllers,
     public string|null $prefixBase = null 
   ){
-    $this->initial();
-    $this->initialUri();
-    $this->initialContentType();
-    $this->initialRequestMethod();
-    $this->initialRequestEndpoint();
-    $this->initialRequestControllers();
-    $this->initialRequestFindController();
-    $this->initialRequestFindEndpointInController();
-    $this->initialRequestWithEndpointData();
-    $this->initialClear();
+    $this->start();
+    $this->startUri();
+    $this->startContentType();
+    $this->startRequestMethod();
+    $this->startRequestEndpoint();
+    $this->startRequestControllers();
+    $this->startRequestFindController();
+    $this->startRequestFindEndpointInController();
+    $this->startRequestWithEndpointData();
+    $this->startClear();
   }
 
-  private function initial(
+  private function start(
   ): void {
     if(isset($_SERVER) === true){
       [ "REQUEST_URI" => $this->uri ] = $_SERVER;
@@ -50,7 +48,7 @@ class Request
     }
   }
 
-  private function initialUri(
+  private function startUri(
   ): void {
     $this->uri = preg_replace(
       "#(^/)|(/$)#", "", preg_replace(
@@ -59,7 +57,7 @@ class Request
     );    
   }
 
-  private function initialContentType(
+  private function startContentType(
   ): void {
     if(isset($_SERVER["CONTENT_TYPE"]) === true){
       $this->contentType = ContentType::fromValue(
@@ -68,7 +66,7 @@ class Request
     }    
   }
 
-  private function initialRequestMethod(
+  private function startRequestMethod(
   ): void {
     if(isset($_SERVER["REQUEST_METHOD"]) === true){
       $this->requestMethod = RequestMethod::fromValue(
@@ -77,7 +75,7 @@ class Request
     }
   }
 
-  private function initialRequestEndpoint(
+  private function startRequestEndpoint(
   ): void {
     $this->endpoints = new Collection(
       $this->prefixBase !== null 
@@ -89,11 +87,22 @@ class Request
         : preg_split( "#/#", $this->uri )
     );
 
-    $this->controller = $this->endpoints->first();
-    $this->endpoints = $this->endpoints->slice(1);
+    if($this->endpoints->count() >= 3){
+      [ $this->module, $this->controller 
+      ] = $this->endpoints->all();
+
+      $this->endpoints = $this->endpoints->slice(2);
+    } else
+    if($this->endpoints->count() === 2){
+      [ $this->module, $this->controller 
+      ] = $this->endpoints->all();
+    } else
+    if($this->endpoints->count() === 1){
+      [ $this->module ] = $this->endpoints->all();
+    }
   }
 
-  private function initialRequestControllers(
+  private function startRequestControllers(
   ): void {
     $this->controllers = $this->controllers->mapper(
       fn(string $controller) => new StructureController(
@@ -102,7 +111,7 @@ class Request
     );
   }
 
-  private function initialRequestFindController(
+  private function startRequestFindController(
   ): void {
     $this->structureController = $this->controllers->find(
       fn(StructureController $structureController) => $structureController->isValid($this)
@@ -113,7 +122,7 @@ class Request
     }
   }
 
-  private function initialRequestFindEndpointInController(
+  private function startRequestFindEndpointInController(
   ): void {
     if($this->structureController){
       $this->structureRoute = $this->structureController->endpoints->find(
@@ -126,10 +135,15 @@ class Request
     }
   }
 
-  private function initialRequestWithEndpointData(
+  private function startRequestWithEndpointData(
   ): void {
     $this->requestData = new RequestData($this);
   }
+
+  private function startClear(
+  ): void {
+    unset($this->controllers);
+  }  
 
   private function getMiddlewares(
   ): Collection {
@@ -150,7 +164,9 @@ class Request
 
   private function getParameters(
   ): Collection {
-    return $this->structureRoute->getParameters();
+    return $this->structureRoute->getParameters()->mapper(fn(object $parameter) => (
+      $parameter->instance->execute($this, $parameter->instanceType)
+    ));
   }
 
   private function getInstance(
@@ -162,27 +178,21 @@ class Request
     if($hasMethodConstruct === true){
       return InstanceDependences::gets($this->structureRoute->reflect->class);
     } else return new $this->structureRoute->reflect->class;
-  }  
+  }
+  
+  private function getMethodName(
+  ): string {
+    return $this->structureRoute->reflect->getName();
+  }
   
   public function getEndpointExecute(
   ): mixed {
-    $getMiddlewares = $this->getMiddlewares();
-    $getParameters = $this->getParameters();
-    $getInstance = $this->getInstance();
+    $this->getMiddlewares()->mapper(
+      fn(object $middleware) => $middleware->execute($this)
+    );
 
-    print_r($getParameters);
-
-    // print_r($getMiddlewares);
-    // print_r($getParameters);
-    // print_r($getInstance);
-
-
-    return [];
+    return call_user_func_array([
+      $this->getInstance(), $this->getMethodName()
+    ], $this->getParameters()->all());
   }
-
-  private function initialClear(
-  ): void {
-    unset($this->controllers);
-  }
-
 }

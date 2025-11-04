@@ -12,14 +12,15 @@ class Param extends AbstractParameter
   public ControllerType $controllerType = ControllerType::Parameter;
 
   public function __construct(
-    public readonly string | null $key = null
+    public readonly string|null $key = null
   ){}
   
   public function execute(
-    Request $request
+    Request $request,
+    string $instanceType
   ): mixed {
     return $this->getValue(
-      $request->requestData->params, $this->key
+      $request->requestData->params, $instanceType, $this->key
     );
   }
 }

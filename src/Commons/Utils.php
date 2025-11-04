@@ -217,5 +217,68 @@ class Utils
     }
 
     return $instance;
+  }
+
+   public static function decodeObject(
+    mixed $data
+  ): mixed {
+    $dataStdClass = new stdClass();
+    foreach((new ReflectionClass($data))->getProperties() as $property){
+      if(isset($data->{$property->getName()})) {
+        $dataStdClass->{
+          $property->getName()
+        } = $property->getValue($data);
+
+        foreach($property->getAttributes() as $attribute){
+          $instance = $attribute->newInstance();
+          /** TODO AttributeType **/
+          if($instance->attributeType === 1){
+            if(isset($instance->columnType)){
+              if($instance && $instance->columnType){
+                $dataStdClass->{
+                  $property->getName()
+                } = $instance->columnType->Decode(
+                  $property->getValue($data), true, $instance->numberDigitsAfterTheComma ?? 2
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return $dataStdClass;
+  } 
+  
+  public static function convertKeysToCamelCase(
+    mixed $data
+  ): mixed {
+    if($data instanceof Collection){
+      $data = $data->All();
+    }
+
+    if (is_array($data)) {
+      $result = [];
+      foreach ($data as $key => $value) {
+        $newKey = is_string($key) ? Utils::toCamelCase($key) : $key;
+        $result[$newKey] = Utils::convertKeysToCamelCase($value);
+      }
+      return $result;
+    }
+
+    if (is_object($data)) {
+      $vars = get_object_vars(
+        Utils::decodeObject($data)
+      );
+
+      $converted = new stdClass();
+      foreach ($vars as $key => $value) {
+        $newKey = Utils::toCamelCase($key);
+        $converted->$newKey = Utils::convertKeysToCamelCase($value);
+      }
+      return $converted;
+    }
+
+    return $data;
   }  
 }
