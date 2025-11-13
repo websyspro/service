@@ -2,6 +2,7 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
+use Exception;
 use ReflectionClass;
 use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Decorations\Server\AllowAnonymous;
@@ -9,6 +10,8 @@ use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\RequestStatus;
+use Websyspro\Core\Enums\Server\ResponseType;
+use Websyspro\Core\Interfaces\Server\ResponseContext;
 
 class Request
 {
@@ -25,7 +28,8 @@ class Request
 
   public function __construct(
     public Collection $controllers,
-    public string|null $prefixBase = null 
+    public string|null $prefixBase = null,
+    public bool|null $isModule = null
   ){
     $this->start();
     $this->startUri();
@@ -87,18 +91,24 @@ class Request
         : preg_split( "#/#", $this->uri )
     );
 
-    if($this->endpoints->count() >= 3){
-      [ $this->module, $this->controller 
-      ] = $this->endpoints->all();
+    if($this->isModule === true){
+      if($this->endpoints->count() >= 3){
+        [ $this->module, $this->controller 
+        ] = $this->endpoints->all();
 
-      $this->endpoints = $this->endpoints->slice(2);
+        $this->endpoints = $this->endpoints->slice(2);
+      } else
+      if($this->endpoints->count() === 2){
+        [ $this->module, $this->controller 
+        ] = $this->endpoints->all();
+      } else
+      if($this->endpoints->count() === 1){
+        [ $this->module ] = $this->endpoints->all();
+      }
     } else
-    if($this->endpoints->count() === 2){
-      [ $this->module, $this->controller 
-      ] = $this->endpoints->all();
-    } else
-    if($this->endpoints->count() === 1){
-      [ $this->module ] = $this->endpoints->all();
+    if($this->isModule === false){
+      [ $this->controller ] = $this->endpoints->all();
+      $this->endpoints = $this->endpoints->slice(1);
     }
   }
 
@@ -186,7 +196,7 @@ class Request
   }
   
   public function getEndpointExecute(
-  ): mixed {
+  ): Response {
     $this->getMiddlewares()->mapper(
       fn(object $middleware) => $middleware->execute($this)
     );

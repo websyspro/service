@@ -2,6 +2,10 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
+use Websyspro\Core\Enums\Server\Headers;
+use Websyspro\Core\Enums\Server\ResponseType;
+use Websyspro\Core\Interfaces\Server\ResponseContext;
+
 class Response
 {
 	public const HTTP_CONTINUE = 100;
@@ -68,9 +72,94 @@ class Response
 	public const HTTP_NOT_EXTENDED = 510;
 	public const HTTP_NETWORK_AUTHENTICATION_REQUIRED = 511;
 
+	public function __construct(
+		private mixed $message,
+		private int $httpStatus,
+		private ResponseType $reponseType
+	){}
+
+	private function getSuccess(
+	): bool {
+		return $this->httpStatus === Response::HTTP_OK 
+			  || $this->httpStatus === Response::HTTP_CREATED 
+				|| $this->httpStatus === Response::HTTP_ACCEPTED;
+	}
+
+	private function getMessage(
+	): mixed {
+		return $this->message;
+	}
+
+	public function getResponseType(
+	): ResponseType {
+		return $this->reponseType;
+	}
+
+	public function getContextJSON(
+	): ResponseContext {
+		header(Headers::accessControlAllowOrigin->value);
+		header(Headers::accessControlAllowHeaders->value);
+		header(Headers::accessControlAllowMethods->value);
+		header(Headers::applicationJSON->value);
+
+		http_response_code(
+			$this->httpStatus
+		);
+
+		return new ResponseContext(
+			success: $this->getSuccess(),
+			content: $this->getMessage()
+		);
+	}
+
+	public function getContextHTML(
+	): ResponseContext {
+		header(Headers::accessControlAllowOrigin->value);
+		header(Headers::accessControlAllowHeaders->value);
+		header(Headers::accessControlAllowMethods->value);
+		header(Headers::textHtml->value);
+
+		http_response_code(
+			$this->httpStatus
+		);
+		
+		return new ResponseContext(
+			success: $this->getSuccess(),
+			content: $this->getMessage()
+		);
+	}	
+
   public static function json(
-    mixed $message
+    mixed $message,
+		int $httpStatus = Response::HTTP_OK
   ): Response {
-    return new static();
+    return new static(
+			$message,
+			$httpStatus,
+			ResponseType::JSON
+		);
   }
+
+  public static function html(
+    mixed $message,
+		int $httpStatus = Response::HTTP_OK
+  ): Response {
+    return new static(
+			$message,
+			$httpStatus,
+			ResponseType::HTML
+		);
+  }	
+
+	public function get(
+	): ResponseContext|null {
+		if($this->reponseType === ResponseType::JSON){
+			return $this->getContextJSON();
+		} else 
+		if($this->reponseType === ResponseType::HTML){
+			return $this->getContextHTML();
+		};
+
+		return null;
+	}	
 }

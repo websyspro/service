@@ -7,7 +7,7 @@ use Websyspro\Core\Enums\Server\ControllerType;
 use Websyspro\Core\Shareds\Server\Request;
 
 #[Attribute(Attribute::TARGET_PARAMETER)]
-class Param extends AbstractParameter
+class Body extends AbstractParameter
 {
   public ControllerType $controllerType = ControllerType::Parameter;
 
@@ -20,7 +20,7 @@ class Param extends AbstractParameter
     string $instanceType
   ): mixed {
     return $this->getValue(
-      $request->requestData->params, 
+      $request->requestData->body, 
       $instanceType, 
       $this->key
     );

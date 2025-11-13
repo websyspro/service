@@ -2,6 +2,7 @@
 
 use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Decorations\Server\AllowAnonymous;
+use Websyspro\Core\Decorations\Server\Body;
 use Websyspro\Core\Decorations\Server\Get;
 use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
@@ -9,6 +10,7 @@ use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Decorations\Server\Module;
 use Websyspro\Core\Decorations\Server\Param;
+use Websyspro\Core\Exceptions\Error;
 use Websyspro\Core\Shareds\Server\Application;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
@@ -20,12 +22,16 @@ class Accounts
   public function __construct(
   ){}
 
-  #[Post(":test?/user/details")]
+  #[Get("user/:test?/details")]
   #[AllowAnonymous()]
   public function all(  
-    #[Param("test")] string $test
+    #[Param()] array $test
   ): Response {
-    return Response::json("Test");
+    //Error::unauthorized("badRequest");
+
+    return Response::json(
+      $test
+    );
   }
 }
 
@@ -38,7 +44,7 @@ class Perfils
   ){}
 
   #[Get("list/get/{productId}")]
-  public function all(    
+  public function all(
   ): array {
     return [];
   }
@@ -58,17 +64,29 @@ class Perfils
 )]
 class AccountModule {}
 
-Application::module([
-  AccountModule::class
-]);
+// Application::module([
+//   AccountModule::class
+// ]);
 
-// $request = new Request(
-//   new Collection([
-//     Accounts::class,
-//     Perfils::class
-//   ]), "api/v1"
-// );
+$request = new Request(
+  new Collection([
+    Accounts::class,
+    Perfils::class
+  ]), "api/v1", true
+);
 
-// print_r($request);
-
-//print_r($request->getEndpointExecute());
+try {
+  exit(
+    json_encode(
+      $request->getEndpointExecute()->get(),
+      JSON_PRETTY_PRINT
+    )
+  );
+} catch (Exception $e) {
+  exit(
+    json_encode(
+      Response::json($e->getMessage(), $e->getCode())->get(),
+      JSON_PRETTY_PRINT
+    )
+  );
+}
