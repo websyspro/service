@@ -14,7 +14,7 @@ class Application
     array $modules = []
   ): Application {
     return new static(
-      modules: new Collection($modules)
+      new Collection($modules)
     );
   }
 }

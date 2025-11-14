@@ -22,10 +22,10 @@ class Accounts
   public function __construct(
   ){}
 
-  #[Get("user/:test?/details")]
+  #[Post("user/:test?/details")]
   #[AllowAnonymous()]
   public function all(  
-    #[Param()] array $test
+    #[Body()] array $test
   ): Response {
     //Error::unauthorized("badRequest");
 
