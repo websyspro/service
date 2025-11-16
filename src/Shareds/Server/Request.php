@@ -2,7 +2,6 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
-use Exception;
 use ReflectionClass;
 use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Decorations\Server\AllowAnonymous;
@@ -10,8 +9,7 @@ use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\RequestStatus;
-use Websyspro\Core\Enums\Server\ResponseType;
-use Websyspro\Core\Interfaces\Server\ResponseContext;
+use Websyspro\Core\Exceptions\Error;
 
 class Request
 {
@@ -159,15 +157,16 @@ class Request
   ): Collection {
     return (
       $this->structureController->getMiddlewares()
-        ->where(fn(object $middleware) => (
-          ($middleware instanceof Authenticate) ? (
+        ->where(function(object $middleware){
+
+          return ($middleware instanceof Authenticate) ? (
             $this->structureRoute->getMiddlewares()->where(
               fn(object $middleware) => (
                 $middleware instanceof AllowAnonymous
               )
             )->exist() === false
-          ) : true
-        ))
+          ) : true;
+        })
         ->merge($this->structureRoute->getMiddlewares())
     );
   }
@@ -194,9 +193,30 @@ class Request
   ): string {
     return $this->structureRoute->reflect->getName();
   }
+
+  private function getController(
+  ): string {
+    return $this->controller;
+  }
+
+  private function getEndpoint(
+  ): string {
+    return $this->endpoints->join("/");
+  }
+
+  private function getValidStatus(
+  ): void {
+    switch($this->requestStatus){
+      case RequestStatus::ControllerNotFound:
+        Error::notFound("Controller [{$this->getController()}] not found");
+      case RequestStatus::EndpointNotFound:
+        Error::notFound("Route [{$this->getEndpoint()}] not found");    
+    }
+  }
   
   public function getEndpointExecute(
   ): Response {
+    $this->getValidStatus();
     $this->getMiddlewares()->mapper(
       fn(object $middleware) => $middleware->execute($this)
     );

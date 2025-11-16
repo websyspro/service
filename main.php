@@ -15,14 +15,14 @@ use Websyspro\Core\Shareds\Server\Application;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
 
-#[Controller("accounts")]
+#[Controller("user")]
 #[Authenticate()]
 class Accounts
 {
   public function __construct(
   ){}
 
-  #[Post("user/:test?/details")]
+  #[Post(":test?/details")]
   #[AllowAnonymous()]
   public function all(  
     #[Body()] array $test
@@ -74,6 +74,8 @@ $request = new Request(
     Perfils::class
   ]), "api/v1", true
 );
+
+
 
 try {
   exit(
