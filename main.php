@@ -8,16 +8,18 @@ use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
 use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
+use Websyspro\Core\Decorations\Server\File;
 use Websyspro\Core\Decorations\Server\Module;
 use Websyspro\Core\Decorations\Server\Param;
+use Websyspro\Core\Decorations\Server\Query;
 use Websyspro\Core\Exceptions\Error;
-use Websyspro\Core\Shareds\Server\Application;
+use Websyspro\Core\Shareds\Server\Api;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
 
 #[Controller("user")]
 #[Authenticate()]
-class Accounts
+class Users
 {
   public function __construct(
   ){}
@@ -58,24 +60,25 @@ class Perfils
 
 #[Module(
   controllers: [
-    Accounts::class,
+    Users::class,
     Perfils::class
   ]
 )]
-class AccountModule {}
+class AccountsModule {}
 
-// Application::module([
-//   AccountModule::class
-// ]);
-
-$request = new Request(
-  new Collection([
-    Accounts::class,
-    Perfils::class
-  ]), "api/v1", true
+$api = (
+  Api::module([
+    AccountsModule::class,
+  ])
 );
 
-
+$request = new Request(
+  // new Collection([
+  //   Users::class,
+  //   Perfils::class
+  // ]), "api/v1"
+  $api, "api/v1"
+);
 
 try {
   exit(

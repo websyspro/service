@@ -27,24 +27,28 @@ class RequestData
 
   private function initialBodys(
   ): void {
-    if($this->request->requestMethod === RequestMethod::Post){
-      if(in_array($this->request->contentType, [
-        ContentType::applicationJson,
-        ContentType::multipartFormData,
-        ContentType::applicationXWwwFormUrlencoded
-      ])){
-        if($this->request->contentType !== ContentType::applicationJson){
-          $this->body = $_POST;
-        } else {
-          $this->body = json_decode(
-            $this->getPhpInput(), true
-          );
-        }
-      }
+    if(isset($this->request->contentType) === false){
+      $this->body = [];
     } else {
-      $this->body = $this->contentFromFile(
-        RequestType::body
-      );
+      if($this->request->requestMethod === RequestMethod::Post){
+        if(in_array($this->request->contentType, [
+          ContentType::applicationJson,
+          ContentType::multipartFormData,
+          ContentType::applicationXWwwFormUrlencoded
+        ])){
+          if($this->request->contentType !== ContentType::applicationJson){
+            $this->body = $_POST;
+          } else {
+            $this->body = json_decode(
+              $this->getPhpInput(), true
+            );
+          }
+        }
+      } else {
+        $this->body = $this->contentFromFile(
+          RequestType::body
+        );
+      }
     }
   }
 
@@ -83,20 +87,22 @@ class RequestData
 
   private function initialFiles(
   ): void {
-    if(in_array($this->request->contentType, [
-      ContentType::applicationPdf,
-      ContentType::applicationXls,
-      ContentType::applicationXlsx,
-      ContentType::textJavascript,
-      ContentType::textPlain,
-      ContentType::textCss,
-      ContentType::textCsv
-    ])){
-      $this->files = $this->contentFromBinary();
-    } else {
-      $this->files = $this->request->requestMethod !== RequestMethod::Post
-        ? $this->contentFromFile(RequestType::file)
-        : $this->contentPostFile();
+    if(isset($this->request->contentType)){
+      if(in_array($this->request->contentType, [
+        ContentType::applicationPdf,
+        ContentType::applicationXls,
+        ContentType::applicationXlsx,
+        ContentType::textJavascript,
+        ContentType::textPlain,
+        ContentType::textCss,
+        ContentType::textCsv
+      ])){
+        $this->files = $this->contentFromBinary();
+      } else {
+        $this->files = $this->request->requestMethod !== RequestMethod::Post
+          ? $this->contentFromFile(RequestType::file)
+          : $this->contentPostFile();
+      }
     }
   }
 

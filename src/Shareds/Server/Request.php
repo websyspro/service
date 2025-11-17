@@ -19,15 +19,15 @@ class Request
   public Collection $endpoints;
   public RequestData $requestData;
   public ContentType $contentType;
+  public Collection|Api $controllers;
   public RequestMethod $requestMethod;
   public RequestStatus $requestStatus;
   public StructureController|null $structureController;
   public StructureRoute|null $structureRoute;
 
   public function __construct(
-    public Collection $controllers,
-    public string|null $prefixBase = null,
-    public bool|null $isModule = null
+    public Api|Web|Collection $ApiOrWebOrCollection,
+    public string|null $prefixBase = null
   ){
     $this->start();
     $this->startUri();
@@ -77,6 +77,36 @@ class Request
     }
   }
 
+  private function getIsControllersFromModule(
+  ): bool {
+    return (
+      $this->ApiOrWebOrCollection instanceof Api ||
+      $this->ApiOrWebOrCollection instanceof Web
+    );    
+  }
+
+  private function setModuleControllerEndpoint(
+  ): void {
+    [ $this->module, $this->controller ] = $this->endpoints->all();
+    $this->endpoints = $this->endpoints->slice(2);    
+  }
+
+  private function setModuleController(
+  ): void {
+    [ $this->module, $this->controller ] = $this->endpoints->all();
+  }
+  
+  private function setModule(
+  ): void {
+    [ $this->module ] = $this->endpoints->all();
+  } 
+  
+  private function setControllerEndpoint(
+  ): void {
+    [ $this->controller ] = $this->endpoints->all();
+    $this->endpoints = $this->endpoints->slice(1);
+  }  
+
   private function startRequestEndpoint(
   ): void {
     $this->endpoints = new Collection(
@@ -89,56 +119,61 @@ class Request
         : preg_split( "#/#", $this->uri )
     );
 
-    if($this->isModule === true){
-      if($this->endpoints->count() >= 3){
-        [ $this->module, $this->controller 
-        ] = $this->endpoints->all();
-
-        $this->endpoints = $this->endpoints->slice(2);
-      } else
-      if($this->endpoints->count() === 2){
-        [ $this->module, $this->controller 
-        ] = $this->endpoints->all();
-      } else
-      if($this->endpoints->count() === 1){
-        [ $this->module ] = $this->endpoints->all();
+    if($this->getIsControllersFromModule() === true){
+      switch($this->endpoints->count()){
+         case 2: $this->setModuleController();
+         case 1: $this->setModule();
+        default: $this->setModuleControllerEndpoint();
       }
-    } else
-    if($this->isModule === false){
-      [ $this->controller ] = $this->endpoints->all();
-      $this->endpoints = $this->endpoints->slice(1);
+    } else {
+      $this->setControllerEndpoint();
     }
   }
 
   private function startRequestControllers(
   ): void {
-    $this->controllers = $this->controllers->mapper(
-      fn(string $controller) => new StructureController(
-        new ReflectionClass($controller)
-      )
-    );
+    if($this->requestStatus === RequestStatus::Ok){
+      if($this->getIsControllersFromModule()){
+        $this->controllers = $this->ApiOrWebOrCollection
+          ->getControllers($this->module);
+      }
+  
+      if($this->controllers->count() === 0){
+        $this->requestStatus = RequestStatus::ModuleNotFound;
+      }    
+  
+      $this->controllers = $this->controllers->mapper(
+        fn(string $controller) => new StructureController(
+          new ReflectionClass($controller)
+        )
+      );
+    }
   }
 
   private function startRequestFindController(
   ): void {
-    $this->structureController = $this->controllers->find(
-      fn(StructureController $structureController) => $structureController->isValid($this)
-    );
-
-    if($this->structureController === null){
-      $this->requestStatus = RequestStatus::ControllerNotFound;
+    if($this->requestStatus === RequestStatus::Ok){
+      $this->structureController = $this->controllers->find(
+        fn(StructureController $structureController) => $structureController->isValid($this)
+      );
+  
+      if($this->structureController === null){
+        $this->requestStatus = RequestStatus::ControllerNotFound;
+      }
     }
   }
 
   private function startRequestFindEndpointInController(
   ): void {
-    if($this->structureController){
-      $this->structureRoute = $this->structureController->endpoints->find(
-        fn(StructureRoute $structureRoute) => $structureRoute->valid($this)
-      );
+    if($this->requestStatus === RequestStatus::Ok){
+      if($this->structureController){
+        $this->structureRoute = $this->structureController->endpoints->find(
+          fn(StructureRoute $structureRoute) => $structureRoute->valid($this)
+        );
 
-      if($this->structureRoute === null){
-        $this->requestStatus = RequestStatus::EndpointNotFound;
+        if($this->structureRoute === null){
+          $this->requestStatus = RequestStatus::EndpointNotFound;
+        }
       }
     }
   }
@@ -194,6 +229,11 @@ class Request
     return $this->structureRoute->reflect->getName();
   }
 
+  private function getModule(
+  ): string {
+    return $this->module;
+  }
+
   private function getController(
   ): string {
     return $this->controller;
@@ -207,6 +247,8 @@ class Request
   private function getValidStatus(
   ): void {
     switch($this->requestStatus){
+      case RequestStatus::ModuleNotFound:
+        Error::notFound("Module [{$this->getModule()}] not found");      
       case RequestStatus::ControllerNotFound:
         Error::notFound("Controller [{$this->getController()}] not found");
       case RequestStatus::EndpointNotFound:

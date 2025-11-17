@@ -9,6 +9,6 @@ use Websyspro\Core\Commons\Collection;
 class Module
 {
   public function __construct(
-    public Collection $controllers = new Collection()
+    public readonly array $controllers
   ){}
 }
