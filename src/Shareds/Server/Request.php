@@ -9,6 +9,7 @@ use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\RequestStatus;
+use Websyspro\Core\Enums\Server\ResponseType;
 use Websyspro\Core\Exceptions\Error;
 
 class Request
@@ -180,7 +181,9 @@ class Request
 
   private function startRequestWithEndpointData(
   ): void {
-    $this->requestData = new RequestData($this);
+    if($this->requestStatus === RequestStatus::Ok){
+      $this->requestData = new RequestData($this);
+    }
   }
 
   private function startClear(
@@ -193,7 +196,6 @@ class Request
     return (
       $this->structureController->getMiddlewares()
         ->where(function(object $middleware){
-
           return ($middleware instanceof Authenticate) ? (
             $this->structureRoute->getMiddlewares()->where(
               fn(object $middleware) => (

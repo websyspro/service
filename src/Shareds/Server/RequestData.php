@@ -141,7 +141,10 @@ class RequestData
   private function extractFile(
     string $value
   ): string {
-    [, , $value] = explode( ";", $value);
+    $fileValue = explode( ";", $value);
+    if(sizeof($fileValue) === 3){
+      [, , $value] = $fileValue;
+    }
 
     if(is_null($value)){
       return "";

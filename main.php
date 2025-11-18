@@ -7,7 +7,11 @@ use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
 use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
+use Websyspro\Core\Decorations\Server\File;
 use Websyspro\Core\Decorations\Server\Module;
+use Websyspro\Core\Decorations\Server\Patch;
+use Websyspro\Core\Decorations\Server\Put;
+use Websyspro\Core\Exceptions\Error;
 use Websyspro\Core\Shareds\Server\Api;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
@@ -24,7 +28,7 @@ class Users
   public function all(  
     #[Body()] array $test
   ): Response {
-    //Error::unauthorized("badRequest");
+    Error::unauthorized("badRequest");
 
     return Response::json(
       $test
