@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  mariadb:
+    image: lscr.io/linuxserver/mariadb:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - MYSQL_ROOT_PASSWORD=qazwsx
+    ports:
+      - 3306:3306
+    restart: unless-stopped
+    networks:
+      - db_network
+
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: qazwsx
+    ports:
+      - "5432:5432"
+    networks:
+      - db_network
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=@Qazwsx190483
+    ports:
+      - "1433:1433"
+    networks:
+      - db_network
+
+networks:
+  db_network:
+    driver: bridge
