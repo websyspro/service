@@ -123,7 +123,7 @@ class Request
               "#^{$this->prefixBase}#", "", $this->uri
             )
           ), -1, PREG_SPLIT_NO_EMPTY) 
-        : preg_split( "#/#", "", -1, $this->uri, -1, PREG_SPLIT_NO_EMPTY)
+        : preg_split( "#/#", "", -1, $this->uri)
     );
 
     if($this->getIsControllersFromModule() === true){

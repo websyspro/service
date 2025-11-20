@@ -130,7 +130,7 @@ class Response
 	}	
 
 	public function getContextOPTS(
-	): void {
+	): ResponseContext {
 		header(Headers::accessControlAllowOrigin->value);
 		header(Headers::accessControlAllowMethods->value);
 
@@ -138,7 +138,10 @@ class Response
 			$this->httpStatus
 		);
 
-		exit();
+		return new ResponseContext(
+			success: $this->getSuccess(),
+			content: $this->getMessage()
+		);
 	}		
 
   public static function json(
@@ -162,6 +165,17 @@ class Response
 			ResponseType::HTML
 		);
   }
+
+	public static function send(	
+		mixed $value	
+	): void {
+		exit(
+			json_encode(
+				$value,
+				JSON_PRETTY_PRINT
+			)
+		);
+	} 	
 	
   public static function option(
   ): Response {
@@ -181,5 +195,5 @@ class Response
 		};
 
 		return null;
-	}	
+	}
 }

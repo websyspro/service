@@ -63,33 +63,21 @@ class Perfils
 )]
 class AccountsModule {}
 
-$api = (
-  Api::module([
-    AccountsModule::class,
-  ])
+Api::module(
+  AccountsModule::class,
 );
 
-$request = new Request(
-  /*
-  new Collection([
-     Users::class,
-     Perfils::class
-  ]), "api/v1" */
-  $api, "api/v1"
-);
+// $api = (
+//   Api::module([
+//     AccountsModule::class,
+//   ])
+// );
 
-try {
-  exit(
-    json_encode(
-      $request->getEndpointExecute()->get(),
-      JSON_PRETTY_PRINT
-    )
-  );
-} catch (Exception $e) {
-  exit(
-    json_encode(
-      Response::json($e->getMessage(), $e->getCode())->get(),
-      JSON_PRETTY_PRINT
-    )
-  );
-}
+// $request = new Request(
+//   /*
+//   new Collection([
+//      Users::class,
+//      Perfils::class
+//   ]), "api/v1" */
+//   $api, "api/v1"
+// );

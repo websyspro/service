@@ -10,7 +10,12 @@ abstract class Application
 {
   public function __construct(
     public Collection $modules = new Collection()
-  ){}
+  ){
+    $this->start();
+  }
+
+  public function start(
+  ): void {}
 
   public function getControllers(
     string $findModule
