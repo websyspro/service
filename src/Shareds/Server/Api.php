@@ -34,7 +34,7 @@ class Api extends Application
   ): void {
     Logger::message(
       LoggerType::context, 
-      "test"
+      getenv("API")
     );
   }
 

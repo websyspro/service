@@ -59,7 +59,7 @@ class Envs
         )
       );
 
-      $this->envs = $this->envs
+      $this->envs
         ->where(fn(string $env) => $this->dropComments( $env))
         ->where(fn(string $env) => $this->dropEmptyLine( $env))
         ->mapper(fn(string $env) => $this->putEnv( $env));

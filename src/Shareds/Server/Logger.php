@@ -57,12 +57,12 @@ class Logger
   }
   
   public static function message(
-    LoggerType $logType,
-    string $logText
+    LoggerType $type,
+    string $text 
   ): bool {
     Logger::isStartTimer();
     fwrite( fopen('php://stdout', 'w'), (
-      sprintf("\x1b[37m%s %s\x1b[32m LOG \x1b[33m[{$logType->value}] \x1b[32m{$logText}\x1b[37m \x1b[37m+%sms\n", 
+      sprintf("\x1b[37m%s %s\x1b[32m LOG \x1b[33m[{$type->value}] \x1b[32m{$text}\x1b[37m \x1b[37m+%sms\n", 
         Logger::getNow(),
         Logger::getOrigem(),
         Logger::getNowTimer(),
@@ -73,12 +73,12 @@ class Logger
   }
 
   public static function error(
-    LoggerType $logType,
-    string $logText      
+    LoggerType $type,
+    string $text     
   ): bool {
     Logger::isStartTimer();
     fwrite( fopen('php://stdout', 'w'), (
-      sprintf( "\x1b[37m%s %s\x1b[32m LOG \x1b[33m[{$logType->value}] \x1b[31m{$logText} \x1b[37m+%sms\n",
+      sprintf( "\x1b[37m%s %s\x1b[32m LOG \x1b[33m[{$type->value}] \x1b[31m{$text} \x1b[37m+%sms\n",
         Logger::getNow(),
         Logger::getOrigem(),
         Logger::getNowTimer(),
