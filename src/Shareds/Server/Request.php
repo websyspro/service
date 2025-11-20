@@ -9,7 +9,6 @@ use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
 use Websyspro\Core\Enums\Server\RequestStatus;
-use Websyspro\Core\Enums\Server\ResponseType;
 use Websyspro\Core\Exceptions\Error;
 
 class Request
@@ -44,8 +43,8 @@ class Request
 
   private function start(
   ): void {
-    if(isset($_SERVER) === true){
-      [ "REQUEST_URI" => $this->uri ] = $_SERVER;
+    if(isset($_SERVER["REQUEST_URI"]) === true){
+      ["REQUEST_URI" => $this->uri] = $_SERVER;
 
       $this->requestStatus = RequestStatus::Ok;
     }
@@ -86,17 +85,24 @@ class Request
     );    
   }
 
+  private function getIsControllersNotModule(
+  ): bool {
+    return $this->ApiOrWebOrCollection instanceof Collection;    
+  }  
+
   private function setModuleControllerEndpoint(
   ): void {
-    [ $this->module, $this->controller ] = $this->endpoints->all();
-    $this->endpoints = $this->endpoints->slice(2);    
+    if($this->endpoints->exist()){
+      [ $this->module, $this->controller ] = $this->endpoints->all();
+      $this->endpoints = $this->endpoints->slice(2);    
+    }
   }
 
   private function setModuleController(
   ): void {
     [ $this->module, $this->controller ] = $this->endpoints->all();
   }
-  
+
   private function setModule(
   ): void {
     [ $this->module ] = $this->endpoints->all();
@@ -106,8 +112,8 @@ class Request
   ): void {
     [ $this->controller ] = $this->endpoints->all();
     $this->endpoints = $this->endpoints->slice(1);
-  }  
-
+  } 
+  
   private function startRequestEndpoint(
   ): void {
     $this->endpoints = new Collection(
@@ -116,44 +122,77 @@ class Request
             "#(^/)|(/$)#", "", preg_replace(
               "#^{$this->prefixBase}#", "", $this->uri
             )
-          )) 
-        : preg_split( "#/#", $this->uri )
+          ), -1, PREG_SPLIT_NO_EMPTY) 
+        : preg_split( "#/#", "", -1, $this->uri, -1, PREG_SPLIT_NO_EMPTY)
     );
 
     if($this->getIsControllersFromModule() === true){
       switch($this->endpoints->count()){
-         case 2: $this->setModuleController();
-         case 1: $this->setModule();
+        case 2: $this->setModuleController();
+          break;
+        case 1: $this->setModule();
+          break;
         default: $this->setModuleControllerEndpoint();
+          break;
       }
     } else {
       $this->setControllerEndpoint();
     }
   }
 
+  public function getIsOk(
+  ): bool {
+    return $this->requestStatus === RequestStatus::Ok;
+  }
+
+  public function getINotsOk(
+  ): bool {
+    return $this->requestStatus !== RequestStatus::Ok;
+  }  
+
+  public function getIsOptions(
+  ): bool {
+    return $this->requestMethod === RequestMethod::Options;
+  }
+
+  public function getIsNotOptions(
+  ): bool {
+    return $this->requestMethod !== RequestMethod::Options;
+  }  
+
+  private function getIsModule(
+  ): bool {
+    return isset($this->module);
+  }
+
   private function startRequestControllers(
   ): void {
-    if($this->requestStatus === RequestStatus::Ok){
-      if($this->getIsControllersFromModule()){
-        $this->controllers = $this->ApiOrWebOrCollection
-          ->getControllers($this->module);
+    if($this->getIsOk()){
+      if($this->getIsModule()){
+        if($this->getIsControllersFromModule()){
+          $this->controllers = $this->ApiOrWebOrCollection->getControllers($this->module);
+        } else if( $this->getIsControllersNotModule()) {
+          $this->controllers = $this->ApiOrWebOrCollection;
+        }
+    
+        if($this->controllers->count() === 0){
+          $this->requestStatus = RequestStatus::ControllerNotFound;
+        }    
+    
+        $this->controllers = $this->controllers->mapper(
+          fn(string $controller) => new StructureController(
+            new ReflectionClass($controller)
+          )
+        );
+      } else {
+        $this->requestStatus = RequestStatus::ModuleEmpty;
       }
-  
-      if($this->controllers->count() === 0){
-        $this->requestStatus = RequestStatus::ModuleNotFound;
-      }    
-  
-      $this->controllers = $this->controllers->mapper(
-        fn(string $controller) => new StructureController(
-          new ReflectionClass($controller)
-        )
-      );
     }
   }
 
   private function startRequestFindController(
   ): void {
-    if($this->requestStatus === RequestStatus::Ok){
+    if($this->getIsOk()){
       $this->structureController = $this->controllers->find(
         fn(StructureController $structureController) => $structureController->isValid($this)
       );
@@ -166,7 +205,7 @@ class Request
 
   private function startRequestFindEndpointInController(
   ): void {
-    if($this->requestStatus === RequestStatus::Ok){
+    if($this->getIsOk()){
       if($this->structureController){
         $this->structureRoute = $this->structureController->endpoints->find(
           fn(StructureRoute $structureRoute) => $structureRoute->valid($this)
@@ -181,7 +220,7 @@ class Request
 
   private function startRequestWithEndpointData(
   ): void {
-    if($this->requestStatus === RequestStatus::Ok){
+    if($this->getIsOk()){
       $this->requestData = new RequestData($this);
     }
   }
@@ -249,17 +288,27 @@ class Request
   private function getValidStatus(
   ): void {
     switch($this->requestStatus){
+      case RequestStatus::ModuleEmpty: 
+          Error::notFound("Module/Controller empty");
+        break;
       case RequestStatus::ModuleNotFound:
-        Error::notFound("Module [{$this->getModule()}] not found");      
+          Error::notFound("Module [{$this->getModule()}] not found");      
+        break;
       case RequestStatus::ControllerNotFound:
-        Error::notFound("Controller [{$this->getController()}] not found");
+          Error::notFound("Controller [{$this->getController()}] not found");
+        break;
       case RequestStatus::EndpointNotFound:
-        Error::notFound("Route [{$this->getEndpoint()}] not found");    
+          Error::notFound("Route [{$this->getEndpoint()}] not found");
+        break;
     }
   }
   
   public function getEndpointExecute(
   ): Response {
+    if($this->getIsOptions()){
+      return Response::option();
+    }
+
     $this->getValidStatus();
     $this->getMiddlewares()->mapper(
       fn(object $middleware) => $middleware->execute($this)

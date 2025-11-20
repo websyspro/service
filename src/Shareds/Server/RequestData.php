@@ -2,6 +2,7 @@
 
 namespace Websyspro\Core\Shareds\Server;
 
+use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Commons\Utils;
 use Websyspro\Core\Enums\Server\ContentType;
 use Websyspro\Core\Enums\Server\RequestMethod;
@@ -54,29 +55,34 @@ class RequestData
 
   private function initialParams(
   ): void {
-    if($this->request->requestStatus === RequestStatus::Ok){
-      $this->request->structureRoute->endpoints->mapper(
-        function(string $path, int $i){
-          $hasParams = (bool)preg_match(
-            "#(^\{.*\}$)|(^\{.*\}\?$)|(^:.*)|(^:.*\?$)#", $path
-          );
-  
-          if( $hasParams === true ){
-            $valueFromRequest = $this->request->endpoints
-              ->eq($i)->first();
+    if($this->request->getIsOk() && $this->request->getIsNotOptions()){
+      if($this->request->structureRoute){
+        $this->request->structureRoute->endpoints->mapper(
+          function(string $path, int $i){
+            $hasParams = (bool)preg_match(
+              "#(^\{.*\}$)|(^\{.*\}\?$)|(^:.*)|(^:.*\?$)#", $path
+            );
+    
+            if($hasParams === true){
+              $valueFromRequest = $this->request->endpoints
+                ->eq($i)->first();
 
-            if( (bool)preg_match( "#\?#", $path )){
-              if( empty($valueFromRequest) === true ){
-                $valueFromRequest = null;
-              } 
+              if((bool)preg_match( "#\?#", $path )){
+                if( empty($valueFromRequest) === true ){
+                  $valueFromRequest = null;
+                } 
+              }
+
+              $type = preg_match("#^\{.*:.*\}?#", $path) === 1 
+                ? preg_replace(["#.*:#", "#\}?#"], "", $path) : null;
+
+              $this->params[
+                preg_replace("#(^\{)|(^:)|(\}$)|(\}\?$)|(\?$)|(:.*)#", "", $path)
+              ] = $this->parseValueFromType($valueFromRequest, $type);
             }
-
-            $this->params[
-              preg_replace("#(^\{)|(^:)|(\}$)|(\}\?$)|(\?$)#", "", $path)
-            ] = $valueFromRequest;
           }
-        }
-      );
+        );
+      }
     }
   }
 
@@ -119,7 +125,7 @@ class RequestData
   private function contentLoadFileList(
     array $bufferArr = []
   ): array {
-    $inputHandle = fopen( "php://input", "r" );
+    $inputHandle = fopen("php://input", "r");
     while(($buffer = fgets( $inputHandle, 4096 )) !== false) {
       $bufferArr[] = $buffer;
     }
@@ -135,18 +141,21 @@ class RequestData
     string $value
   ): string {
     [, $value] = explode(";", $value);
-    return preg_replace( "/(^name=\")|(\"$)/", "", trim($value));
+    return preg_replace("/(^name=\")|(\"$)/", "", trim($value));
   }
 
   private function extractFile(
     string $value
   ): string {
-    $fileValue = explode( ";", $value);
-    if(sizeof($fileValue) === 3){
-      [, , $value] = $fileValue;
+    $fileArgs = new Collection(
+      explode( ";", $value)
+    );
+
+    if($fileArgs->count() === 3){
+      $value = $fileArgs->first();
     }
 
-    if(is_null($value)){
+    if(is_null( $value )){
       return "";
     }
 
@@ -259,6 +268,24 @@ class RequestData
         )
       ]
     );
+  }
+
+  private function parseValueFromType(
+    string $value,
+    string $type
+  ): mixed {
+    switch (strtolower($type)) {
+      case 'int':
+      case 'integer': return (int)$value;
+      case 'float':
+      case 'double':
+      case 'real': return (float)$value;
+      case 'bool':
+      case 'boolean': return (bool)($value);
+      case 'string': 
+      case "text": return (string) $value;
+      default: return $value;
+    }
   }
   
   private function initialClear(

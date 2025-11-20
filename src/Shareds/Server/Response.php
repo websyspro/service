@@ -129,8 +129,20 @@ class Response
 		);
 	}	
 
+	public function getContextOPTS(
+	): void {
+		header(Headers::accessControlAllowOrigin->value);
+		header(Headers::accessControlAllowMethods->value);
+
+		http_response_code(
+			$this->httpStatus
+		);
+
+		exit();
+	}		
+
   public static function json(
-    mixed $message,
+    mixed $message = "",
 		int $httpStatus = Response::HTTP_OK
   ): Response {
     return new static(
@@ -141,7 +153,7 @@ class Response
   }
 
   public static function html(
-    mixed $message,
+    mixed $message = "",
 		int $httpStatus = Response::HTTP_OK
   ): Response {
     return new static(
@@ -149,7 +161,12 @@ class Response
 			$httpStatus,
 			ResponseType::HTML
 		);
-  }	
+  }
+	
+  public static function option(
+  ): Response {
+    return new static( "", Response::HTTP_OK, ResponseType::OPTS);
+  }		
 
 	public function get(
 	): ResponseContext|null {
@@ -158,6 +175,9 @@ class Response
 		} else 
 		if($this->reponseType === ResponseType::HTML){
 			return $this->getContextHTML();
+		} else
+		if($this->reponseType === ResponseType::OPTS){
+			return $this->getContextOPTS();
 		};
 
 		return null;

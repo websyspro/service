@@ -171,10 +171,10 @@ class Utils
   public static function isPrimitiveType(
     string $primitiveType
   ): bool {
-    return in_array($primitiveType, [
+    return in_array( $primitiveType, [
       "int", "integer", "float", "double", 
       "string", "bool", "boolean", "array", "null"
-    ], true);
+    ], true );
   }
   
   public static function hydrateObject( 

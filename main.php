@@ -1,16 +1,15 @@
 <?php
 
+use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Decorations\Server\AllowAnonymous;
-use Websyspro\Core\Decorations\Server\Body;
 use Websyspro\Core\Decorations\Server\Get;
 use Websyspro\Core\Decorations\Server\Post;
 use Websyspro\Core\Decorations\Server\Controller;
 use Websyspro\Core\Decorations\Server\FileValidade;
 use Websyspro\Core\Decorations\Server\Authenticate;
-use Websyspro\Core\Decorations\Server\File;
+use Websyspro\Core\Decorations\Server\Body;
 use Websyspro\Core\Decorations\Server\Module;
-use Websyspro\Core\Decorations\Server\Patch;
-use Websyspro\Core\Decorations\Server\Put;
+use Websyspro\Core\Decorations\Server\Param;
 use Websyspro\Core\Exceptions\Error;
 use Websyspro\Core\Shareds\Server\Api;
 use Websyspro\Core\Shareds\Server\Request;
@@ -23,15 +22,14 @@ class Users
   public function __construct(
   ){}
 
-  #[Post(":test?/details")]
+  #[Post("{testId:bool}/details")]
   #[AllowAnonymous()]
   public function all(  
-    #[Body()] array $test
+    #[Body()] array $testId
   ): Response {
-    Error::unauthorized("badRequest");
-
+    //Error::unauthorized("badRequest");
     return Response::json(
-      $test
+      $testId
     );
   }
 }
@@ -72,10 +70,11 @@ $api = (
 );
 
 $request = new Request(
-  // new Collection([
-  //   Users::class,
-  //   Perfils::class
-  // ]), "api/v1"
+  /*
+  new Collection([
+     Users::class,
+     Perfils::class
+  ]), "api/v1" */
   $api, "api/v1"
 );
 
