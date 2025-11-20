@@ -3,7 +3,11 @@
 namespace Websyspro\Core\Shareds\Server;
 
 use Exception;
+use ReflectionClass;
+use ReflectionAttribute;
+use ReflectionClassConstant;
 use Websyspro\Core\Commons\Collection;
+use Websyspro\Core\Decorations\Server\Module;
 use Websyspro\Core\Enums\Server\LoggerType;
 
 class Api extends Application
@@ -30,11 +34,112 @@ class Api extends Application
       : $this->startApiServer();
   }
 
-  public function startApiClient(
+  private function parseModule(
+    string $module
+  ): string {
+    return preg_replace( 
+      "#Module$#",
+      "",
+      $module
+    );
+  }
+
+  private function parseController(
+    string $controller
+  ): string {
+    return preg_replace( 
+      "#Controller$#",
+      "",
+      $controller
+    );
+  }
+
+  private function loggerMapModule(
+    string $module
   ): void {
     Logger::message(
-      LoggerType::context, 
-      getenv("API")
+      LoggerType::controller, 
+      sprintf( 
+        "Map module %s", 
+        $this->parseModule( $module )
+      )
+    );   
+  }
+
+  private function loggerMapControllerFromModule(
+    string $module, string $controller
+  ): void {
+    Logger::message(
+      LoggerType::controller, 
+      sprintf( 
+        "Map %s controller from module %s", ...[
+          $this->parseController($controller), 
+          $this->parseModule( $module )
+        ]
+      )
+    );
+  }
+
+  private function loggerEndpointsFromController(
+    StructureController $structureController,
+    string $module, 
+    string $controller
+  ): void {
+    $this->loggerMapControllerFromModule(
+      $module, $controller
+    );
+
+    $structureController->endpoints->mapper(
+      function(StructureRoute $structureRoute){
+        Logger::message(
+          LoggerType::controller, 
+          sprintf( 
+            "Map route {%s, %s}", ...[
+              $structureRoute->requestMethod->value,
+              $structureRoute->endpoints->join(DIRECTORY_SEPARATOR)
+            ]
+          )
+        );        
+      }
+    );
+  }
+
+  public function startApiClient(
+  ): void {
+    $this->modules->mapper(
+      function( string $module ) {
+        $reflectionClass = new ReflectionClass(
+          $module
+        );
+
+        $this->loggerMapModule( $module );
+
+        $getAttributes = new Collection(
+          $reflectionClass->getAttributes(
+            Module::class
+          )
+        );
+        
+        $getAttributes = $getAttributes->mapper(
+          function( ReflectionAttribute $reflectionAttribute ) use ($module) {
+            $controllers = new Collection(
+              $reflectionAttribute
+                ->newInstance()
+                ->controllers
+            );
+
+            $controllers->mapper(
+              fn(string $controller) => (
+                $this->loggerEndpointsFromController(
+                  new StructureController(
+                    new ReflectionClass($controller)
+                  ), $module, $controller
+                )
+              )
+            );
+          }
+        );
+      }
     );
   }
 

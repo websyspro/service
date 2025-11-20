@@ -17,7 +17,7 @@ use Websyspro\Core\Shareds\Server\Response;
 
 #[Controller("user")]
 #[Authenticate()]
-class Users
+class UserController
 {
   public function __construct(
   ){}
@@ -37,7 +37,7 @@ class Users
 #[Controller("perfils")]
 #[Authenticate()]
 #[FileValidade()]
-class Perfils
+class PerfilController
 {
   public function __construct(
   ){}
@@ -57,8 +57,8 @@ class Perfils
 
 #[Module(
   controllers: [
-    Users::class,
-    Perfils::class
+    UserController::class,
+    PerfilController::class
   ]
 )]
 class AccountsModule {}

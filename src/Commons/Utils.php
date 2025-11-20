@@ -104,7 +104,9 @@ class Utils
       }
     }
 
-    return $iterableNew;
+    return array_values(
+      $iterableNew
+    );
   }
 
   public static function find(
