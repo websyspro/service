@@ -10,10 +10,14 @@ use Websyspro\Core\Decorations\Server\Authenticate;
 use Websyspro\Core\Decorations\Server\Body;
 use Websyspro\Core\Decorations\Server\Module;
 use Websyspro\Core\Decorations\Server\Param;
+use Websyspro\Core\Enums\Database\ConnectionType;
 use Websyspro\Core\Exceptions\Error;
+use Websyspro\Core\Shareds\Database\Connection;
+use Websyspro\Core\Shareds\Database\Drivers\MSSql;
 use Websyspro\Core\Shareds\Server\Api;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
+use Websyspro\Core\Shareds\Server\Tcp;
 
 #[Controller("user")]
 #[Authenticate()]
@@ -63,9 +67,37 @@ class PerfilController
 )]
 class AccountsModule {}
 
+/*
 Api::module(
   AccountsModule::class,
+); */
+
+/*
+$connection = new Connection(
+  "localhost", 
+  3306, 
+  "test", 
+  "root", 
+  "qazwsx", 
+  ConnectionType::MySQL
 );
+
+$res = $connection->query("SELECT id, descriptor FROM test.solicitacoes");
+print_r($res); */
+
+/*
+$mssql = new MSSql(
+  "localhost",
+  1433,
+  "test",
+  "sa",
+  "@Qazwsx190483"  
+);
+
+$mssql->connect(); */
+
+$tcp = new Tcp("localhost", 3306);
+$tcp->open();
 
 // $api = (
 //   Api::module([
