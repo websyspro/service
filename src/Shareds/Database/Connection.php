@@ -36,6 +36,8 @@ class Connection
 
 			[ $_, $handShake ] = $this->getReadPacket();
 
+			var_dump($handShake);
+
 			$offSet = 0;
 			$protocol = ord(
 				$handShake[
@@ -230,12 +232,13 @@ class Connection
 			return [0, ""];
 		}
 
+		
 		$length = (
-			 ord($header[0]) |
-      (ord($header[1]) << 8) |
-      (ord($header[2]) << 16)
+			ord($header[0]) |
+			(ord($header[1]) << 8) |
+			(ord($header[2]) << 16)
 		);
-
+		
 		$sequence = ord($header[3]);
 
 		$payload = "";

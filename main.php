@@ -14,6 +14,7 @@ use Websyspro\Core\Enums\Database\ConnectionType;
 use Websyspro\Core\Exceptions\Error;
 use Websyspro\Core\Shareds\Database\Connection;
 use Websyspro\Core\Shareds\Database\Drivers\MSSql;
+use Websyspro\Core\Shareds\Database\Drivers\MySQL;
 use Websyspro\Core\Shareds\Server\Api;
 use Websyspro\Core\Shareds\Server\Request;
 use Websyspro\Core\Shareds\Server\Response;
@@ -72,18 +73,41 @@ Api::module(
   AccountsModule::class,
 ); */
 
+
 /*
 $connection = new Connection(
   "localhost", 
   3306, 
-  "test", 
+  "edocente", 
   "root", 
-  "qazwsx", 
+  "", 
   ConnectionType::MySQL
-);
+); */
 
-$res = $connection->query("SELECT id, descriptor FROM test.solicitacoes");
-print_r($res); */
+// $res = $connection->query("SELECT id, post_name FROM edocente.wp_posts limit 16");
+// print_r($res);
+
+try {
+
+    $mysql = new MySQL(
+        host: "localhost",
+        port: 3306,
+        dbname: "edocente",       // coloque um nome de database que existe
+        username: "root",
+        password: "@Qazwsx190483"
+    );
+
+    $ok = $mysql->connectAndLogin(true); // TRUE = mostrar DEBUG HEX
+
+    if ($ok) {
+        echo "🔥 LOGIN REALIZADO COM SUCESSO!\n";
+    } else {
+        echo "❌ Falhou sem exception (algo inesperado)\n";
+    }
+
+} catch (Exception $e) {
+    echo "❌ ERRO:::: " . $e->getMessage() . "\n";
+}
 
 /*
 $mssql = new MSSql(
@@ -96,8 +120,8 @@ $mssql = new MSSql(
 
 $mssql->connect(); */
 
-$tcp = new Tcp("localhost", 3306);
-$tcp->open();
+///$tcp = new Tcp("localhost", 3306);
+//$tcp->open();
 
 // $api = (
 //   Api::module([
