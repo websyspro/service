@@ -24,7 +24,7 @@ class Api extends Application
   public function startEnvs(
   ): void {
     $this->envs = new Envs();
-    $this->envs->start();
+    $this->envs->get();
   }
 
   public function startApi(
@@ -63,7 +63,7 @@ class Api extends Application
         "Map module %s", 
         $this->parseModule( $module )
       )
-    );   
+    );
   }
 
   private function loggerMapControllerFromModule(

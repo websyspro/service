@@ -5,6 +5,7 @@ namespace Websyspro\Core\Shareds\Server;
 use Websyspro\Core\Commons\Collection;
 use Websyspro\Core\Interfaces\Server\Args;
 
+
 class Envs
 {
   private Collection $envs;

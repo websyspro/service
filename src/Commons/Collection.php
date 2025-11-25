@@ -135,7 +135,13 @@ class Collection
   public function last(    
   ): mixed {
     return end($this->items);
-  }  
+  } 
+  
+  public function orderByAsc(
+  ): Collection {
+    ksort($this->items);
+    return new Collection($this->items);
+  }
 
   public function all(
   ): array {

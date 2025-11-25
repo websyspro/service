@@ -57,7 +57,13 @@ class PerfilController
   public function products(    
   ): array {
     return [];
-  }  
+  }
+  
+  #[Post("list/find/products")]
+  public function findProduct(
+  ): Response {
+    return Response::json("teste");
+  }
 }
 
 #[Module(
@@ -68,10 +74,9 @@ class PerfilController
 )]
 class AccountsModule {}
 
-/*
 Api::module(
   AccountsModule::class,
-); */
+);
 
 
 /*
@@ -87,6 +92,7 @@ $connection = new Connection(
 // $res = $connection->query("SELECT id, post_name FROM edocente.wp_posts limit 16");
 // print_r($res);
 
+/*
 try {
 
     $mysql = new MySQL(
@@ -108,6 +114,7 @@ try {
 } catch (Exception $e) {
     echo "❌ ERRO:::: " . $e->getMessage() . "\n";
 }
+*/
 
 /*
 $mssql = new MSSql(

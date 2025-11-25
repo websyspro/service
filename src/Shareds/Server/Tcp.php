@@ -30,7 +30,7 @@ class Tcp
 
 		if ($connected === false) {
 			Error::internalServerError(
-				"Erro ao conectar: {$this->host}:{$this->port}"
+				"Erro ao conectars: {$this->host}:{$this->port}"
 			);
 		}
 	}
