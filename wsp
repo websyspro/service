@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+require_once dirname(__FILE__) . "/vendor/autoload.php";
+require_once dirname(__FILE__) . "/defines.php";
+
+use Websyspro\Core\Shareds\Server\Commander;
+use Websyspro\Core\Shareds\Server\Envs;
+
+new Commander(
+	(new Envs())->get(),
+);

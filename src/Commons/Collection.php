@@ -71,9 +71,8 @@ class Collection
   public function slice(
     int $start,
     int|null $lenght = null
-  ): Collection {
-    $this->items = array_slice($this->items, $start, $lenght);
-    return $this;
+  ): Collection {;
+    return new Collection(array_slice($this->items, $start, $lenght));
   }
   
   public function chunk(

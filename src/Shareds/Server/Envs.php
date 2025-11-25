@@ -3,6 +3,7 @@
 namespace Websyspro\Core\Shareds\Server;
 
 use Websyspro\Core\Commons\Collection;
+use Websyspro\Core\Interfaces\Server\Args;
 
 class Envs
 {
@@ -47,8 +48,8 @@ class Envs
     ));
   }
 
-  public function start(
-  ) {
+  public function get(
+  ): Envs {
     if( defined("rootDir") === true){
       $this->envs = new Collection(
         file( 
@@ -64,5 +65,35 @@ class Envs
         ->where(fn(string $env) => $this->dropEmptyLine( $env))
         ->mapper(fn(string $env) => $this->putEnv( $env));
     }
+
+    return $this;
+  }
+
+  public function args(
+  ) : Args {
+    global $argv;
+
+    $collectionArgs = (
+      new Collection($argv)
+    )->slice(1);
+
+    if($collectionArgs->exist() === false) {
+      return new Args();
+    }
+
+    $args = new Args();
+    
+    // get commander
+    $args->command = $collectionArgs->eq(0)->first();
+
+    // get flags and parameters
+    if($collectionArgs->slice(1)->exist() === true) {
+      foreach($collectionArgs->slice(1)->all() as $flagWithParam) {
+        [ $flag, $param ] = explode("=", $flagWithParam);
+        $args->flags[ preg_replace("#^\-*#","", $flag) ] = $param;
+      }
+    }
+
+    return $args;
   }
 }
