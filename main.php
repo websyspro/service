@@ -169,6 +169,8 @@ extends SocketUtils
 	private string $authPluginSaltRaw = "";
 	private int $packetMax = 16777216;
 	private bool $connected = false;
+	private string|null $erron = null;
+	private string|null $error = null;
 
 	public function __construct(
 		private string $host,
@@ -343,6 +345,8 @@ extends SocketUtils
 			$packetHead->size
 		);
 
+		print_r($packetBody->data);
+
 		if( ord($packetBody->data[0]) === 0x01 ){
 			$publicKeyRaw = substr(
 				$packetBody->data, 
@@ -351,7 +355,7 @@ extends SocketUtils
 		}
 
 		$publicKey = openssl_pkey_get_public($publicKeyRaw);
-		if (!$publicKey) {
+		if( $publicKey === false ){
 			Error::internalServerError(
 				"Failed to load public key: " . openssl_error_string()
 			);
@@ -373,7 +377,7 @@ extends SocketUtils
 			$publicKey,
 			OPENSSL_PKCS1_OAEP_PADDING
 		) === false){
-			throw new RuntimeException(
+			Error::internalServerError(
 				"Falha ao criptografar senha: " . openssl_error_string()
 			);
 		}
@@ -404,11 +408,11 @@ extends SocketUtils
 			);
     }
 
-		$secundByte = MySqlAuthMoreData::fromByte(
+		$mySqlAuthMoreData = MySqlAuthMoreData::fromByte(
 			$packetBody->data[1]
 		);
 
-		switch( $secundByte ){
+		switch( $mySqlAuthMoreData ){
 			case MySqlAuthMoreData::FAST_AUTH_SUCCESS:
 					$this->connected = true;
 				break;
@@ -469,11 +473,35 @@ extends SocketUtils
 		);
 	}
 
+	private function mysqlError(
+		MySQLPacketBody $packetBody
+	): void {
+		$this->erron = unpack(
+			'v', 
+			substr(
+				$packetBody->data, 
+				1,
+				2
+			)
+		)[1];
+
+		$this->error = substr($packetBody->data, 9);
+	}	
+
 	private function loginResponseValid(
 		MySQLPacketHead $packetHead,
 		MySQLPacketBody $packetBody,
 	): void {
-		switch(MySqlAuthResponse::fromByte($packetBody->data[0])){
+		$mysqlAuthResponse = MySqlAuthResponse::fromByte(
+			$packetBody->data[0]
+		);
+
+		if($mysqlAuthResponse === MySqlAuthResponse::ERR){
+			$this->mysqlError( $packetBody );
+			return;
+		}
+
+		switch($mysqlAuthResponse){
 			case MySqlAuthResponse::OK:
 					$this->connected = true;
 				break;
@@ -631,7 +659,6 @@ extends SocketUtils
 			$columns[] = $name;
 		}
 		
-		// Ler pacote EOF após definições de coluna
 		$packetHead = $this->readPacketHead();
 		$packetBody = $this->readPacketBody(
 			$packetHead->size
@@ -645,9 +672,11 @@ extends SocketUtils
 			$packetBody = $this->readPacketBody(
 				$packetHead->size
 			);
+
+			$hasPacketEOF = ord($packetBody->data[0]) 
+				 					=== 0xFE && $packetHead->size < 9;
 			
-			// Verificar se é pacote EOF (fim dos dados)
-			if(ord($packetBody->data[0]) === 0xFE && $packetHead->size < 9){
+			if($hasPacketEOF){
 				break;
 			}
 			
@@ -666,11 +695,11 @@ extends SocketUtils
 }
 
 $mysqlConnector = new MySQLConnector(
-	"127.0.0.1",
-	3307, 
+	"localhost",
+	3306, 
 	"root",
-	"qazwsx",
-	"test"
+	"@Qazwsx190483",
+	"edocente"
 );
 
 $startConnect = microtime(true);
