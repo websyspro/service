@@ -1,1 +1,14 @@
-{}
+{
+  "editor.fontFamily": "Cascadia Code, Consolas, 'Courier New', monospace",
+  "editor.fontWeight": "normal",
+  "editor.fontSize": 15,
+  "editor.lineHeight": 20,
+
+  // "intelephense.completion.insertUseDeclaration": true,
+  // "intelephense.completion.fullyQualifyGlobalConstantsAndFunctions": true,
+  // "intelephense.codeLens.implementations.enable": true,
+  // "intelephense.codeLens.overrides.enable": true,
+  // "intelephense.codeLens.parent.enable": true,
+  // "intelephense.codeLens.references.enable": true,
+  // "intelephense.codeLens.usages.enable": true
+}

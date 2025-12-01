@@ -103,8 +103,8 @@ function read_length_encoded_string($payload, &$pos) {
     $first = ord($payload[$pos]);
     $pos++;
     if ($first < 0xFB) {
-        return substr($payload, $pos, $first);
         $pos += $first;
+        return substr($payload, $pos, $first);
     } elseif ($first === 0xFB) {
         return null; // NULL
     } else {

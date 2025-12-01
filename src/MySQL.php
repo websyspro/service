@@ -53,7 +53,7 @@ function mysql_build_login_packet(array $h, string $user, string $pass, string $
     define_if_not('CLIENT_PROTOCOL_41', 0x00000200);
     define_if_not('CLIENT_SECURE_CONNECTION', 0x00008000);
     define_if_not('CLIENT_PLUGIN_AUTH', 0x00080000);
-    define_if_not('CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA', 0x00200000);
+    define_if_not('CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA', value: 0x00200000);
 
     $client_flags = CLIENT_LONG_PASSWORD | CLIENT_LONG_FLAG | CLIENT_PROTOCOL_41 |
                     CLIENT_SECURE_CONNECTION | CLIENT_PLUGIN_AUTH |
@@ -194,8 +194,8 @@ if ($type===0x00) {
         list($seq3, $resp2) = send_plain_xor($sock,$pass,$salt,$seq2+1);
         $t2 = ord($resp2[0]);
         if ($t2===0x00) {
-					echo "[OK] Login bem-sucedido após XOR!\n";
-				} else if ($t2===0xFF) { $msg=substr($resp2,3); echo "[ERRO FINAL] ".trim($msg)."\n"; }
+		    echo "[OK] Login bem-sucedido após XOR!\n";
+	    } else if ($t2===0xFF) { $msg=substr($resp2,3); echo "[ERRO FINAL] ".trim($msg)."\n"; }
     } elseif ($type===0x04) { // RSA
         $rsaKeyHex = substr($resp,1);
         $rsaKeyPEM = "-----BEGIN PUBLIC KEY-----\n" .
