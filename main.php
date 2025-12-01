@@ -585,13 +585,6 @@ extends SocketUtils
     return $columnValue;
 	}
 
-	private function columnValue(
-		MySQLPacketBody $packetBody,
-		int &$offset
-	): string|null {
-		return $this->columnDetail($packetBody, $offset);
-	}
-
 	public function query(
 		string $sql
 	): void {
@@ -661,7 +654,7 @@ extends SocketUtils
 			$offset = 0;
 			$row = [];
 			for($c=0; $c<$queryCollumns; $c++){
-				$value = $this->columnValue($packetBody, $offset);
+				$value = $this->columnDetail($packetBody, $offset);
 				$row[$columns[$c]] = $value;
 			}
 
@@ -683,13 +676,14 @@ $mysqlConnector = new MySQLConnector(
 $startConnect = microtime(true);
 $mysqlConnector->connect();
 $endConnect = microtime(true);
+
 $connectTime = round(($endConnect - $startConnect) * 1000, 2);
 
 if ($mysqlConnector->isConnected()) {
 	echo "✓ Conectado ao MySQL com sucesso em {$connectTime}ms!\n";
 	
 	$startQuery = microtime(true);
-	$mysqlConnector->query("select host, user, plugin, authentication_string from mysql.user");
+	$mysqlConnector->query("select ID as post_ID, post_title from test.wp_posts");
 	$endQuery = microtime(true);
 	$queryTime = round(($endQuery - $startQuery) * 1000, 2);
 	
