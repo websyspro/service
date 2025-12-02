@@ -159,6 +159,70 @@ enum MySqlAuthMoreData: int {
 	}
 }
 
+enum MySqlAuthPlugin: string {
+	case MYSQL_NATIVE_PASSWORD = "mysql_native_password";
+	case CACHING_SHA2_PASSWORD = "caching_sha2_password";
+
+	public static function fromString(
+		string $pluginName
+	): MySqlAuthPlugin {
+		return match ($pluginName) {
+			"mysql_native_password" => self::MYSQL_NATIVE_PASSWORD,
+			"caching_sha2_password" => self::CACHING_SHA2_PASSWORD,
+			default => Error::internalServerError(
+				"Unsupported MySQL auth plugin: {$pluginName}"
+			),
+		};
+	}
+
+	public function generateAuth(
+		string $password,
+		string $salt
+	): string {
+		return match ($this) {
+			self::MYSQL_NATIVE_PASSWORD => $this->nativePasswordAuth($password, $salt),
+			self::CACHING_SHA2_PASSWORD => $this->sha2PasswordAuth($password, $salt),
+		};
+	}
+
+	private function nativePasswordAuth(
+		string $password,
+		string $salt
+	): string {
+		$saltBin = hex2bin($salt);
+		$hash1 = sha1($password, true);
+		$hash2 = sha1($hash1, true);
+		$hash3 = sha1($saltBin . $hash2, true);
+		return $hash1 ^ $hash3;
+	}
+
+	private function sha2PasswordAuth(
+		string $password,
+		string $salt
+	): string {
+		$password1 = hash("sha256", $password, true);
+		$password2 = hash("sha256", $password1, true);
+		$password3 = hash("sha256", $password2 . $salt, true);
+		return $password1 ^ $password3;
+	}
+}
+
+class ExecuteResult
+{
+	public function __construct(
+		public int $affectedRows,
+		public int|string $lastInsertId
+	){}
+}
+
+class QueryResult
+{
+	public function __construct(
+		public int $rowsCount,
+		public array $rows
+	){}	
+}
+
 class MySQLConnector 
 extends SocketUtils 
 {
@@ -169,8 +233,6 @@ extends SocketUtils
 	private string $authPluginSaltRaw = "";
 	private int $packetMax = 16777216;
 	private bool $connected = false;
-	private string|null $erron = null;
-	private string|null $error = null;
 
 	public function __construct(
 		private string $host,
@@ -205,50 +267,64 @@ extends SocketUtils
 		);
 
 		$i = 0;
-		$this->protocolVersion = ord($packetBody->data[$i++]);
+		$this->protocolVersion = ord(
+			$packetBody->data[$i++]
+		);
 
 		$this->serverVersion = "";
 		while($packetBody->data[$i] !== "\0"){
 			$this->serverVersion .= $packetBody->data[$i++];
-		}
-		$i++; // pula o \0
+		} $i += 5;
 
-		$i += 4; // pula connection_id
+		$salt1 = substr(
+			$packetBody->data,
+			$i,
+			8
+		); $i += 11;
 
-		$salt1 = substr($packetBody->data, $i, 8);
-		$i += 8;
+		$this->charset = ord(
+			$packetBody->data[$i++]
+		); $i += 4;
 
-		$i++; // pula filler
+		$authLen = ord(
+			$packetBody->data[$i++]
+		);
 
-		$i += 2; // pula capability_flags_1
+		$i += 10;
 
-		$this->charset = ord($packetBody->data[$i++]);
+		$salt2 = substr(
+			$packetBody->data, 
+			$i,
+			max(
+				13,
+				$authLen - 8
+			)
+		); 
+		
+		$i += max(
+			13,
+			$authLen - 8
+		);
 
-		$i += 2; // pula status_flags
-		$i += 2; // pula capability_flags_2
-
-		$authLen = ord($packetBody->data[$i++]);
-
-		$i += 10; // pula reserved
-
-		$salt2 = substr($packetBody->data, $i, max(13, $authLen - 8));
-		$i += max(13, $authLen - 8);
-
-		$this->plugin = "";
 		while($i < strlen($packetBody->data) && $packetBody->data[$i] !== "\0"){
 			$this->plugin .= $packetBody->data[$i++];
 		}
 
-		$this->authPluginSaltRaw = bin2hex($salt1 . rtrim($salt2, "\x00"));
+		$this->authPluginSaltRaw = bin2hex(
+			$salt1 . rtrim(
+				$salt2,
+				"\x00"
+			)
+		);
 
 		return $packetHead;
 	}
 
-	private function clientAuth() {
-    $password1 = hash("sha256", $this->pass, true);
-    $password2 = hash("sha256", $password1, true);
-    $password3 = hash("sha256", $password2 . $this->authPluginSaltRaw, true);
-    return $password1 ^ $password3;
+	private function clientAuth(
+	): string {
+		return MySqlAuthPlugin::fromString( $this->plugin )->generateAuth(
+			$this->pass, $this->authPluginSaltRaw
+		);
 	}
 
 	private function clientFlags(
@@ -299,17 +375,15 @@ extends SocketUtils
 		MySQLPacketHead $packetHead,
 		MySQLPacketBody $packetBody
 	): void {
-		$salt = substr(
-			$packetBody->data,
-			strpos(
-				$packetBody->data, 
-				"\x00", 
-				1
-			) + 1
-		);
-
 		$scramble = $this->scramble_sha256(
-			$this->pass, $salt
+			$this->pass, substr(
+				$packetBody->data,
+				strpos(
+					$packetBody->data, 
+					"\x00", 
+					1
+				) + 1
+			)
 		);
 
 		$this->sendPacket(
@@ -341,8 +415,6 @@ extends SocketUtils
 			$packetHead->size
 		);
 
-		print_r($packetBody->data);
-
 		if( ord($packetBody->data[0]) === 0x01 ){
 			$publicKeyRaw = substr(
 				$packetBody->data, 
@@ -367,12 +439,11 @@ extends SocketUtils
 			)
 		);
 
-		if(openssl_public_encrypt(
-			$xorData,
-			$encrypted,
-			$publicKey,
-			OPENSSL_PKCS1_OAEP_PADDING
-		) === false){
+		$openSSLPublicEncrypt = openssl_public_encrypt( 
+			$xorData, $encrypted, $publicKey, OPENSSL_PKCS1_OAEP_PADDING
+		);
+
+		if( $openSSLPublicEncrypt === false ){
 			Error::internalServerError(
 				"Falha ao criptografar senha: " . openssl_error_string()
 			);
@@ -428,7 +499,7 @@ extends SocketUtils
 					);
 				break;
 			case MySqlAuthMoreData::PUBLIC_KEY_DATA:
-					Error::internalServerError( 
+					Error::internalServerError(
 						"MySQL Error: AuthMoreData public key data"
 					);
 				break;
@@ -469,21 +540,6 @@ extends SocketUtils
 		);
 	}
 
-	private function mysqlError(
-		MySQLPacketBody $packetBody
-	): void {
-		$this->erron = unpack(
-			'v', 
-			substr(
-				$packetBody->data, 
-				1,
-				2
-			)
-		)[1];
-
-		$this->error = substr($packetBody->data, 9);
-	}	
-
 	private function loginResponseValid(
 		MySQLPacketHead $packetHead,
 		MySQLPacketBody $packetBody,
@@ -493,8 +549,12 @@ extends SocketUtils
 		);
 
 		if($mysqlAuthResponse === MySqlAuthResponse::ERR){
-			$this->mysqlError( $packetBody );
-			return;
+			Error::internalServerError(
+				substr(
+					$packetBody->data, 
+					9
+				)
+			);
 		}
 
 		switch($mysqlAuthResponse){
@@ -524,7 +584,7 @@ extends SocketUtils
 	private function isNotValidVersion(
 	): bool {
 		return $this->protocolVersion !== "" && preg_match(
-			"#^[89]\.*#", $this->serverVersion
+			"#^[5-9]\.*#", $this->serverVersion
 		) === 0;
 	}
 
@@ -545,6 +605,47 @@ extends SocketUtils
 	public function isConnected(
 	): bool {
 		return $this->connected;
+	}
+
+	public function execute(
+		string $sql
+	): ExecuteResult {
+		$payloadBody = chr(
+			0x03
+		) . $sql;
+		
+		$this->sendPacket(
+			$payloadBody,
+			0
+		);
+
+		$packetHead = $this->readPacketHead();
+		$packetBody = $this->readPacketBody(
+			$packetHead->size
+		);
+
+		if(ord( $packetBody->data[0]) === 0xFF ){
+			Error::internalServerError(
+				substr(
+					$packetBody->data, 
+					9
+				)
+			);
+		}
+
+		if(ord($packetBody->data[0]) === 0x00){
+			$offset = 1;
+			
+			return new ExecuteResult(
+				$this->readLengthEncodedInteger( $packetBody->data, $offset),
+				$this->readLengthEncodedInteger( $packetBody->data, $offset)
+			);
+		}
+		
+		return new ExecuteResult(
+			0, 
+			0
+		);
 	}
 
 	private function columnDetail(
@@ -594,7 +695,7 @@ extends SocketUtils
 					)
 				); $offset += 9;
     } else {
-      Error::internalServerError(
+			Error::internalServerError(
 				"Byte inesperado na leitura length-encoded string: 0x" . dechex($firstByte)
 			);
     }
@@ -607,11 +708,11 @@ extends SocketUtils
 
     $offset += $length;
     return $columnValue;
-	}
+	}	
 
 	public function query(
 		string $sql
-	): void {
+	): QueryResult {
 		$payloadBody = chr(0x03) . $sql;
 		
 		$this->sendPacket(
@@ -624,12 +725,12 @@ extends SocketUtils
 			$packetHead->size
 		);
 
-		// Verificar se é pacote de erro (0xFF)
 		if(ord($packetBody->data[0]) === 0xFF){
-			$errorCode = unpack('v', substr($packetBody->data, 1, 2))[1];
-			$errorMessage = substr($packetBody->data, 9);
 			Error::internalServerError(
-				"MySQL Error #{$errorCode}: {$errorMessage}"
+				substr(
+					$packetBody->data, 
+					9
+				)
 			);
 		}
 
@@ -662,7 +763,6 @@ extends SocketUtils
 		
 		$rows = [];
 		
-		// Ler linhas de dados
 		while(true){
 			$packetHead = $this->readPacketHead();
 			$packetBody = $this->readPacketBody(
@@ -672,21 +772,78 @@ extends SocketUtils
 			$hasPacketEOF = ord($packetBody->data[0]) 
 				 					=== 0xFE && $packetHead->size < 9;
 			
-			if($hasPacketEOF){
+			if( $hasPacketEOF ){
 				break;
 			}
 			
 			$offset = 0;
 			$row = [];
+
 			for($c=0; $c<$queryCollumns; $c++){
-				$value = $this->columnDetail($packetBody, $offset);
-				$row[$columns[$c]] = $value;
+				$row[$columns[$c]] = $this->columnDetail(
+					$packetBody, 
+					$offset
+				);
 			}
 
 			$rows[] = $row;
 		}
 		
-		print_r($rows);
+		return new QueryResult(
+			sizeof(
+				$rows
+			), $rows
+		);
+	}
+
+	private function readLengthEncodedInteger(
+		string $data,
+		int &$offset
+	): int {
+		$firstByte = ord($data[$offset]);
+		
+		if($firstByte < 0xFB){
+			$offset++;
+			return $firstByte;
+		}
+		
+		if($firstByte === 0xFC){
+			$value = unpack(
+				'v',
+				substr(
+					$data,
+					$offset + 1,
+					2
+				)
+			)[1]; $offset += 3;
+			return $value;
+		}
+		
+		if($firstByte === 0xFD){
+			$value = unpack(
+				'V',
+				substr(
+					$data . "\0",
+					$offset + 1,
+					3
+				)
+			)[1] & 0xFFFFFF; $offset += 4;
+			return $value;
+		}
+		
+		if($firstByte === 0xFE){
+			$value = unpack(
+				'P', 
+				substr(
+					$data,
+					$offset + 1,
+					8
+				)
+			)[1]; $offset += 9;
+			return $value;
+		}
+		
+		return 0;
 	}
 }
 
@@ -704,17 +861,29 @@ $endConnect = microtime(true);
 
 $connectTime = round(($endConnect - $startConnect) * 1000, 2);
 
-print_r($mysqlConnector);
-
 if ($mysqlConnector->isConnected()) {
 	echo "✓ Conectado ao MySQL com sucesso em {$connectTime}ms!\n";
 	
+	// Teste SELECT
 	$startQuery = microtime(true);
-	$mysqlConnector->query("select ID as post_ID, post_title from wp_posts limit 1");
+	$queryResult = $mysqlConnector->query("select ID as post_ID, post_title from wp_posts limit 100");
+	print_r(	$queryResult);
 	$endQuery = microtime(true);
 	$queryTime = round(($endQuery - $startQuery) * 1000, 2);
-	
 	echo "Query executada em {$queryTime}ms\n";
+	
+	// Teste INSERT
+	/*
+	$startExecute = microtime(true);
+	$result = $mysqlConnector->execute("INSERT INTO wp_posts (post_title, post_content, post_status, post_excerpt) VALUES ('Teste', 'Conteúdo teste', 'draft', '')");
+	$endExecute = microtime(true);
+	$executeTime = round(($endExecute - $startExecute) * 1000, 2);
+	*/
+
+	//echo "Execute executado em {$executeTime}ms\n";
+	//echo "Linhas afetadas: {$result['affected_rows']}\n";
+	//echo "Last Insert ID: {$result['last_insert_id']}\n";
+	
 } else {
 	echo "✗ Falha na conexão\n";
 }
