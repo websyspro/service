@@ -204,46 +204,42 @@ extends SocketUtils
 			$packetHead->size
 		);
 
-		$this->protocolVersion = ord(
-			$packetBody->data[0]
-		); $i = 0;
+		$i = 0;
+		$this->protocolVersion = ord($packetBody->data[$i++]);
 
+		$this->serverVersion = "";
 		while($packetBody->data[$i] !== "\0"){
-			$this->serverVersion .= trim(
-				$packetBody->data[$i]
-			); $i++; 
-		} $i+=5;
+			$this->serverVersion .= $packetBody->data[$i++];
+		}
+		$i++; // pula o \0
 
-		$salt1 = substr(
-			$packetBody->data,
-			$i,
-			8
-		); $i+=9;
+		$i += 4; // pula connection_id
 
-		$this->charset = ord(
-			$packetBody->data[$i]
-		); $i+=8;
+		$salt1 = substr($packetBody->data, $i, 8);
+		$i += 8;
 
-		$authLen = ord(
-			$packetBody->data[$i]
-		); $i+=11;
-		
-		$salt2 = substr( 
-			$packetBody->data,
-			$i,
-			max(
-				13,$authLen-8
-			)
-		); $i += max(13,$authLen-8);
+		$i++; // pula filler
 
-		$j=$i; 
-		while(isset($packetBody->data[$j]) && $packetBody->data[$j] !== "\0"){ 
-			$this->plugin .= $packetBody->data[$j]; $j++;
+		$i += 2; // pula capability_flags_1
+
+		$this->charset = ord($packetBody->data[$i++]);
+
+		$i += 2; // pula status_flags
+		$i += 2; // pula capability_flags_2
+
+		$authLen = ord($packetBody->data[$i++]);
+
+		$i += 10; // pula reserved
+
+		$salt2 = substr($packetBody->data, $i, max(13, $authLen - 8));
+		$i += max(13, $authLen - 8);
+
+		$this->plugin = "";
+		while($i < strlen($packetBody->data) && $packetBody->data[$i] !== "\0"){
+			$this->plugin .= $packetBody->data[$i++];
 		}
 
-		$this->authPluginSaltRaw = bin2hex(
-			$salt1 . rtrim( $salt2, "\x00")
-		);
+		$this->authPluginSaltRaw = bin2hex($salt1 . rtrim($salt2, "\x00"));
 
 		return $packetHead;
 	}
@@ -528,7 +524,7 @@ extends SocketUtils
 	private function isNotValidVersion(
 	): bool {
 		return $this->protocolVersion !== "" && preg_match(
-			"#^8\.*#", $this->serverVersion
+			"#^[89]\.*#", $this->serverVersion
 		) === 0;
 	}
 
@@ -708,11 +704,13 @@ $endConnect = microtime(true);
 
 $connectTime = round(($endConnect - $startConnect) * 1000, 2);
 
+print_r($mysqlConnector);
+
 if ($mysqlConnector->isConnected()) {
 	echo "✓ Conectado ao MySQL com sucesso em {$connectTime}ms!\n";
 	
 	$startQuery = microtime(true);
-	$mysqlConnector->query("select ID as post_ID, post_title from test.wp_posts");
+	$mysqlConnector->query("select ID as post_ID, post_title from wp_posts limit 1");
 	$endQuery = microtime(true);
 	$queryTime = round(($endQuery - $startQuery) * 1000, 2);
 	
