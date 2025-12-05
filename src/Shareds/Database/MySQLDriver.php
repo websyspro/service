@@ -390,9 +390,28 @@ extends ConnectDriver
 		return $this->connected;
 	}
 
+	public function startTransaction(): void {
+		$this->execute( "start transaction" );
+	}
+
+	public function commit(): void {
+		$this->execute( "commit" );
+	}
+
+	public function rollback(): void {
+		$this->execute( "rollback" );
+	}
+
 	public function execute(
-		string $sql
+		string $sql,
+		array $prepareds = []
 	): ExecuteResult {
+		if (!empty($prepareds)) {
+			$sql = $this->preparedParams(
+				$sql, $prepareds
+			);
+		}
+		
 		$payloadBody = chr(
 			0x03
 		) . $sql;
@@ -494,8 +513,15 @@ extends ConnectDriver
 	}	
 
 	public function query(
-		string $sql
+		string $sql,
+		array $prepareds = []
 	): QueryResult {
+		if (!empty($prepareds)) {
+			$sql = $this->preparedParams(
+				$sql, $prepareds
+			);
+		}
+		
 		$payloadBody = chr(0x03) . $sql;
 		
 		$this->sendPacket(
@@ -579,6 +605,40 @@ extends ConnectDriver
 		);
 	}
 
+	private function preparedParams(
+		string $sql,
+		array $params
+	): string {
+		foreach ($params as $param) {
+			if (is_string($param)) {
+				$escaped = addslashes($param);
+				$sql = preg_replace(
+					'/\?/', 
+					"'$escaped'", 
+					$sql, 
+					1
+				);
+			} else
+			if (is_int( $param ) || is_float( $param )){
+				$sql = preg_replace(
+					'/\?/', 
+					$param,
+					$sql,
+					1
+				);
+			} else
+			if (is_null($param)) {
+				$sql = preg_replace(
+					'/\?/', 
+					'NULL', 
+					$sql, 
+					1
+				);
+			}
+		}
+		
+		return $sql;
+	}
 	private function readLengthEncodedInteger(
 		string $data,
 		int &$offset
