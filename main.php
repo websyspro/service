@@ -39,7 +39,7 @@ if( $queryResult->exists() === false ) {
 }
 
 $queryResult = $mysqlDriver->query(
-	"select * from tbTest"
+	"select * from tbTest", []
 );
 
 print_r($queryResult);
