@@ -15,7 +15,7 @@ $mysqlDriver = new MariaDBDriver(
 $connectResult = $mysqlDriver->connect();
 
 if($connectResult->connected === false ){
-	print_r($connectResult->error);
+	print_r($connectResult);
 	exit();
 }
 
