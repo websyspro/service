@@ -3,6 +3,7 @@
 namespace Websyspro\Core\Shareds\Database;
 
 use Websyspro\Core\Exceptions\Error;
+use Websyspro\Core\Shareds\Database\ConnectResult;
 use Websyspro\Core\Interfaces\Database\PacketBody;
 use Websyspro\Core\Interfaces\Database\PacketHead;
 
@@ -57,7 +58,7 @@ abstract class ConnectDriver
 	}
 
 	public function connect(
-	): void {
+	): ConnectResult {
 		$this->socket = @fsockopen(
 			$this->host,
 			$this->port, 
@@ -67,7 +68,11 @@ abstract class ConnectDriver
 		);
 
 		if( $this->socket ){
-			$this->connectAfter();
+			return $this->connectAfter();
+		} else {
+			return new ConnectResult(
+				false, $this->error
+			);
 		}
 	}
 
@@ -75,9 +80,9 @@ abstract class ConnectDriver
 	): PacketHead;
 
 	abstract public function connectAfter(		
-	): void;
+	): ConnectResult;
 	
 	abstract public function connectSession(
 		PacketHead $packetHead
-	): void;
+	): ConnectResult;
 }

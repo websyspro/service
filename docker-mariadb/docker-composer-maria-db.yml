@@ -1,0 +1,36 @@
+services:
+  mariadb_12_00_02:
+    image: mariadb:12.0
+    container_name: 12.00.02
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - MYSQL_ROOT_PASSWORD=@Qazwsx190483
+    ports:
+      - 3412:3306
+    restart: always
+
+  mariadb_11_08_15:
+    image: mariadb:11.8
+    container_name: 11.08.15
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - MYSQL_ROOT_PASSWORD=@Qazwsx190483
+    ports:
+      - 3411:3306
+    restart: always
+
+  mariadb_10_11_05:
+    image: mariadb:10.11.5
+    container_name: 10.11.05
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - MYSQL_ROOT_PASSWORD=@Qazwsx190483
+    ports:
+      - 3410:3306
+    restart: always    

@@ -8,5 +8,10 @@ class QueryResult
 		public int $rowsCount,
 		public array $rows,
     public string|null $error = null
-	){}	
+	){}
+
+	public function exists(
+	): bool {
+		return $this->rowsCount !== 0;
+	}
 }

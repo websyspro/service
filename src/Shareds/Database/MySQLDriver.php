@@ -3,6 +3,7 @@
 namespace Websyspro\Core\Shareds\Database;
 
 use Websyspro\Core\Exceptions\Error;
+use Websyspro\Core\Shareds\Database\ConnectResult;
 use Websyspro\Core\Interfaces\Database\PacketHead;
 use Websyspro\Core\Interfaces\Database\PacketBody;
 
@@ -157,7 +158,7 @@ extends ConnectDriver
 	public function connectSessionAuthSwitchRequest(
 		PacketHead $packetHead,
 		PacketBody $packetBody
-	): void {
+	): ConnectResult {
 		$scramble = $this->scramble_sha256(
 			$this->pass, substr(
 				$packetBody->data,
@@ -179,7 +180,7 @@ extends ConnectDriver
 			$packetHead->size
 		);
 
-		$this->loginResponseValid(
+		return $this->loginResponseValid(
 			$packetHead, 
 			$packetBody,
 		);
@@ -187,7 +188,7 @@ extends ConnectDriver
 
 	private function connectSessionfullAuthRequired(
 		PacketHead $packetHead
-	): void {
+	): ConnectResult {
 		$this->sendPacket(
 			"\x02",
 			$packetHead->sequenceNext()
@@ -207,7 +208,8 @@ extends ConnectDriver
 
 		$publicKey = openssl_pkey_get_public($publicKeyRaw);
 		if( $publicKey === false ){
-			Error::internalServerError(
+			return new ConnectResult(
+				false, 
 				"Failed to load public key: " . openssl_error_string()
 			);
 		}
@@ -227,7 +229,8 @@ extends ConnectDriver
 		);
 
 		if( $openSSLPublicEncrypt === false ){
-			Error::internalServerError(
+			return new ConnectResult(
+				false, 
 				"Falha ao criptografar senha: " . openssl_error_string()
 			);
 		}
@@ -242,7 +245,7 @@ extends ConnectDriver
 			$packetHead->size
 		);
 
-		$this->loginResponseValid(
+		return $this->loginResponseValid(
 			$packetHead, 
 			$packetBody
 		);		
@@ -251,10 +254,10 @@ extends ConnectDriver
 	public function connectSessionAuthMoreData(
 		PacketHead $packetHead,
 		PacketBody $packetBody
-	): void {
+	): ConnectResult {
 		if( strlen($packetBody->data) < 2 ){
-      Error::internalServerError(
-				"Pacote AUTH_MORE_DATA inválido: esperado pelo menos 2 bytes."
+      return new ConnectResult(
+				false, "Pacote AUTH_MORE_DATA inválido: esperado pelo menos 2 bytes."
 			);
     }
 
@@ -264,34 +267,38 @@ extends ConnectDriver
 
 		switch( $mySqlAuthMoreData ){
 			case MySqlAuthMoreData::FAST_AUTH_SUCCESS:
-					$this->connected = true;
-				break;
+				return new ConnectResult(
+					$this->connected = true
+				);
 			case MySqlAuthMoreData::FULL_AUTH_REQUIRED:
-					$this->connectSessionfullAuthRequired(
-						$packetHead
-					);
-				break;
+				return $this->connectSessionfullAuthRequired(
+					$packetHead
+				);
 			case MySqlAuthMoreData::REQUEST_PUBLIC_KEY:
-					Error::internalServerError( 
-						"MySQL Error: AuthMoreData request public key"
-					);
-				break;
+				return new ConnectResult(
+					false, 
+					"MySQL Error: AuthMoreData request public key"
+				);
 			case MySqlAuthMoreData::ADDITIONAL_DATA:
-					Error::internalServerError( 
-						"MySQL Error: AuthMoreData additional data"
-					);
-				break;
+				return new ConnectResult(
+					false, 
+					"MySQL Error: AuthMoreData additional data"
+				);
 			case MySqlAuthMoreData::PUBLIC_KEY_DATA:
-					Error::internalServerError(
-						"MySQL Error: AuthMoreData public key data"
-					);
-				break;
+				return new ConnectResult(
+					false,
+					"MySQL Error: AuthMoreData public key data"
+				);
+			default:
+				return new ConnectResult(
+					false
+				);
 		}
 	}
 
 	public function connectSession(
 		PacketHead $packetHead
-	): void {
+	): ConnectResult {
 		$payloadBody  = pack("V", $this->clientFlags());
     $payloadBody .= pack("V", $this->packetMax);
     $payloadBody .= chr($this->charset);
@@ -317,7 +324,7 @@ extends ConnectDriver
 			$packetHead->size
 		);
 
-		$this->loginResponseValid(
+		return $this->loginResponseValid(
 			$packetHead, 
 			$packetBody
 		);
@@ -326,14 +333,14 @@ extends ConnectDriver
 	private function loginResponseValid(
 		PacketHead $packetHead,
 		PacketBody $packetBody,
-	): void {
+	): ConnectResult {
 		$mysqlAuthResponse = MySqlAuthResponse::fromByte(
 			$packetBody->data[0]
 		);
 
 		if($mysqlAuthResponse === MySqlAuthResponse::ERR){
-			Error::internalServerError(
-				substr(
+			return new ConnectResult(
+				false, substr(
 					$packetBody->data, 
 					9
 				)
@@ -342,45 +349,49 @@ extends ConnectDriver
 
 		switch($mysqlAuthResponse){
 			case MySqlAuthResponse::OK:
-					$this->connected = true;
-				break;
+				return new ConnectResult(
+					$this->connected = true
+				);
 			case MySqlAuthResponse::AUTH_SWITCH_REQUEST:
-					$this->connectSessionAuthSwitchRequest(
-						$packetHead, 
-						$packetBody
-					);
-				break;
+				return $this->connectSessionAuthSwitchRequest(
+					$packetHead, 
+					$packetBody
+				);
 			case MySqlAuthResponse::AUTH_MORE_DATA:
-					$this->connectSessionAuthMoreData(
-						$packetHead, 
-						$packetBody
-					);
-				break;	
+				return $this->connectSessionAuthMoreData(
+					$packetHead, 
+					$packetBody
+				);	
 			case MySqlAuthResponse::FULL_AUTH_REQUIRED:
-					$this->connectSessionfullAuthRequired(
-						$packetHead
-					);
-				break;
+				return $this->connectSessionfullAuthRequired(
+					$packetHead
+				);
+			default:
+				return new ConnectResult(
+					false
+				);
 		}
 	}
 
-	private function isNotValidVersion(
+	protected function isNotValidVersion(
 	): bool {
 		return $this->protocolVersion !== "" && preg_match(
-			"#^[5-9]\.*#", $this->serverVersion
+			"#^[5-8-9]\.*#", 
+			$this->serverVersion
 		) === 0;
 	}
 
 	public function connectAfter(
-	): void {
+	): ConnectResult {
 		$packetHead = $this->connectOptios();
 		if($this->isNotValidVersion()){
-			Error::internalServerError( 
+			return new ConnectResult(
+				false, 
 				"MySQL version {$this->serverVersion} not compatible"
 			);
 		}
 
-		$this->connectSession(
+		return $this->connectSession(
 			$packetHead
 		);
 	}
