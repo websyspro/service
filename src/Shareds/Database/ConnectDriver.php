@@ -19,42 +19,15 @@ abstract class ConnectDriver
 		private int $port
 	){}
 
-	private function invalidChunck(
-		string $chunk
-	): bool {
-		return $chunk === false || $chunk === "";
-	}
-
 	public function writePacket(
 		string $payload
 	): int|bool {
 		return fwrite( $this->socket, $payload);
 	}
 
-	public function readPacketBody(
-		string $size,
-		string $data = ""
-	): PacketBody {
-		while(strlen($data) < $size) {
-      $chunk = fread(
-				$this->socket, 
-				$size - strlen(
-					$data
-				)
-			);
-
-      if( $this->invalidChunck( $chunk )) {
-        Error::internalServerError(
-					"Socket closed while reading!"
-				);
-      }
-
-      $data .= $chunk;
-    }
-
-		return new PacketBody(
-			$data
-		);
+	public function getSocket(
+	): mixed {
+		return $this->socket;
 	}
 
 	public function connect(

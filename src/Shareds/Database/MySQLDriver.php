@@ -31,6 +31,12 @@ extends ConnectDriver
 		);
 	}
 
+	public function invalidChunck(
+		string $chunk
+	): bool {
+		return $chunk === false || $chunk === "";
+	}	
+
 	private function readPacketHead(
 	): PacketHead {
 		$packetBody = $this->readPacketBody(4);
@@ -41,6 +47,32 @@ extends ConnectDriver
 			    | ord($packetBody->data[1]) << 8 
 					| ord($packetBody->data[2]) << 16
 		);		
+	}
+
+	public function readPacketBody(
+		int $size,
+		string $data = ""
+	): PacketBody {
+		while(strlen($data) < $size) {
+      $chunk = fread(
+				$this->getSocket(), 
+				$size - strlen(
+					$data
+				)
+			);
+
+      if( $this->invalidChunck( $chunk )) {
+        Error::internalServerError(
+					"Socket closed while reading!"
+				);
+      }
+
+      $data .= $chunk;
+    }
+
+		return new PacketBody(
+			$data
+		);
 	}
 
 	public function connectOptios(
