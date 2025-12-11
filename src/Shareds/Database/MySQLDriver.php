@@ -300,15 +300,15 @@ extends ConnectDriver
 		PacketHead $packetHead
 	): ConnectResult {
 		$payloadBody  = pack("V", $this->clientFlags());
-    $payloadBody .= pack("V", $this->packetMax);
-    $payloadBody .= chr($this->charset);
-    $payloadBody .= str_repeat("\0", 23);
-    $payloadBody .= $this->user . "\0";
-    $payloadBody .= chr(
-			strlen($this->clientAuth())
-		) . $this->clientAuth();
+		$payloadBody .= pack("V", $this->packetMax);
+		$payloadBody .= chr($this->charset);
+		$payloadBody .= str_repeat("\0", 23);
+		$payloadBody .= $this->user . "\0";
+		$payloadBody .= chr( strlen(
+			$this->clientAuth()
+		)) . $this->clientAuth();
     
-		if($this->data !== ""){
+		if($this->data !== "" && $this->data !== null){
 			$payloadBody .= "{$this->data}\0";
 		}
 
@@ -438,12 +438,10 @@ extends ConnectDriver
 		);
 
 		if(ord( $packetBody->data[0]) === 0xFF ){
-			Error::internalServerError(
-				substr(
-					$packetBody->data, 
-					9
-				)
-			);
+			return new ExecuteResult( false, 0, substr(
+				$packetBody->data, 
+				9
+			));
 		}
 
 		if(ord($packetBody->data[0]) === 0x00){
